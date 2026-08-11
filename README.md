@@ -1,0 +1,2 @@
+# guestmode
+Minecraft plugin
