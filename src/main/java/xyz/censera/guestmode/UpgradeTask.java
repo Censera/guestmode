@@ -7,23 +7,16 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.util.UUID;
 
-/*
- * Polls the guest registry every second on the main thread and upgrades any
- * player that has been whitelisted since they joined.
- *
- * Bukkit fires no event when a player is added to the whitelist, so polling
- * is the only option without NMS. One second latency is acceptable.
- */
-public final class UpgradeTask {
+final class UpgradeTask {
 
     private final GuestMode plugin;
     private BukkitTask task;
 
-    public UpgradeTask(GuestMode plugin) {
+    UpgradeTask(GuestMode plugin) {
         this.plugin = plugin;
     }
 
-    public void start() {
+    void start() {
         task = new BukkitRunnable() {
             @Override
             public void run() {
@@ -32,7 +25,7 @@ public final class UpgradeTask {
         }.runTaskTimer(plugin, 20L, 20L);
     }
 
-    public void cancel() {
+    void cancel() {
         if (task != null) {
             task.cancel();
             task = null;
@@ -41,11 +34,8 @@ public final class UpgradeTask {
 
     private void tick() {
         GuestRegistry registry = plugin.getRegistry();
-        PluginConfig cfg = plugin.getPluginConfig();
+        PluginConfig config = plugin.getPluginConfig();
 
-        /* Snapshot before iterating so that remove() inside the loop does not
-         * race with the live set. The ConcurrentHashMap iterator is weakly
-         * consistent, but an explicit snapshot makes the intent clear. */
         for (UUID uuid : registry.snapshot()) {
             Player player = Bukkit.getPlayer(uuid);
 
@@ -55,17 +45,17 @@ public final class UpgradeTask {
             }
 
             if (player.isWhitelisted()) {
-                upgrade(player, cfg);
+                upgrade(player, config);
             }
         }
     }
 
-    private void upgrade(Player player, PluginConfig cfg) {
+    private void upgrade(Player player, PluginConfig config) {
         plugin.getRegistry().remove(player.getUniqueId());
-        player.setGameMode(cfg.getUpgradeGameMode());
-        player.sendMessage(GuestMode.colorize(cfg.getUpgradeMessage()));
+        player.setGameMode(config.getUpgradeGameMode());
+        player.sendMessage(GuestMode.colorize(config.getUpgradeMessage()));
 
-        String broadcast = cfg.getBroadcastOnUpgrade();
+        String broadcast = config.getBroadcastOnUpgrade();
         if (!broadcast.isEmpty()) {
             Bukkit.broadcastMessage(
                     GuestMode.colorize(broadcast.replace("%player%", player.getName())));
