@@ -4,13 +4,7 @@ import org.bukkit.GameMode;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.logging.Level;
-
-/*
- * Typed wrapper around config.yml.
- * Rebuilt on each reload so callers always read the current values.
- */
-public final class PluginConfig {
+final class PluginConfig {
 
     private final String guestJoinMessage;
     private final String upgradeMessage;
@@ -20,35 +14,76 @@ public final class PluginConfig {
     private final boolean kickIfWhitelistEnabled;
     private final String kickMessage;
 
-    public PluginConfig(JavaPlugin plugin) {
+    PluginConfig(JavaPlugin plugin) {
         FileConfiguration cfg = plugin.getConfig();
 
-        guestJoinMessage       = cfg.getString("guest-join-message",    "&eWelcome, &f%player%&e! You are in Guest Mode. You can explore but not build or break.");
-        upgradeMessage         = cfg.getString("upgrade-message",       "&aYou have been whitelisted! Switching you to Survival mode.");
-        broadcastOnUpgrade     = cfg.getString("broadcast-on-upgrade",  "&6%player% &ahas been whitelisted and upgraded from Guest Mode!");
-        kickIfWhitelistEnabled = cfg.getBoolean("kick-if-whitelist-enabled", false);
-        kickMessage            = cfg.getString("kick-message",          "&cThis server is whitelisted. Contact an admin to be added.");
-
-        guestGameMode   = parseGameMode(plugin, "guest-gamemode",  cfg.getString("guest-gamemode",  "ADVENTURE"), GameMode.ADVENTURE);
-        upgradeGameMode = parseGameMode(plugin, "upgrade-gamemode", cfg.getString("upgrade-gamemode", "SURVIVAL"),  GameMode.SURVIVAL);
+        guestJoinMessage = requiredString(cfg, "guest-join-message");
+        upgradeMessage = requiredString(cfg, "upgrade-message");
+        broadcastOnUpgrade = requiredString(cfg, "broadcast-on-upgrade");
+        kickMessage = requiredString(cfg, "kick-message");
+        kickIfWhitelistEnabled = cfg.getBoolean("kick-if-whitelist-enabled");
+        guestGameMode = parseGameMode(cfg, "guest-gamemode", GameMode.ADVENTURE, GameMode.SPECTATOR);
+        upgradeGameMode = parseGameMode(cfg, "upgrade-gamemode", GameMode.SURVIVAL, GameMode.CREATIVE);
     }
 
-    private static GameMode parseGameMode(JavaPlugin plugin, String key, String raw, GameMode fallback) {
+    private static String requiredString(FileConfiguration cfg, String key) {
+        String value = cfg.getString(key);
+        if (value == null) {
+            throw new IllegalArgumentException("Missing required configuration: " + key);
+        }
+        return value;
+    }
+
+    private static GameMode parseGameMode(
+            FileConfiguration cfg,
+            String key,
+            GameMode firstAllowed,
+            GameMode secondAllowed) {
+        String raw = requiredString(cfg, key);
         try {
-            return GameMode.valueOf(raw.toUpperCase());
+            GameMode mode = GameMode.valueOf(raw.toUpperCase());
+            if (mode != firstAllowed && mode != secondAllowed) {
+                throw invalidGameMode(key, raw);
+            }
+            return mode;
         } catch (IllegalArgumentException e) {
-            plugin.getLogger().log(Level.WARNING,
-                    "Invalid game mode ''{0}'' for key ''{1}'' — falling back to {2}.",
-                    new Object[]{ raw, key, fallback.name() });
-            return fallback;
+            if (e.getMessage() != null && e.getMessage().startsWith("Invalid game mode for ")) {
+                throw e;
+            }
+            throw invalidGameMode(key, raw);
         }
     }
 
-    public String getGuestJoinMessage()       { return guestJoinMessage; }
-    public String getUpgradeMessage()         { return upgradeMessage; }
-    public String getBroadcastOnUpgrade()     { return broadcastOnUpgrade; }
-    public GameMode getGuestGameMode()        { return guestGameMode; }
-    public GameMode getUpgradeGameMode()      { return upgradeGameMode; }
-    public boolean isKickIfWhitelistEnabled() { return kickIfWhitelistEnabled; }
-    public String getKickMessage()            { return kickMessage; }
+    private static IllegalArgumentException invalidGameMode(String key, String value) {
+        return new IllegalArgumentException(
+                "Invalid game mode for " + key + ": " + value);
+    }
+
+    String getGuestJoinMessage() {
+        return guestJoinMessage;
+    }
+
+    String getUpgradeMessage() {
+        return upgradeMessage;
+    }
+
+    String getBroadcastOnUpgrade() {
+        return broadcastOnUpgrade;
+    }
+
+    GameMode getGuestGameMode() {
+        return guestGameMode;
+    }
+
+    GameMode getUpgradeGameMode() {
+        return upgradeGameMode;
+    }
+
+    boolean isKickIfWhitelistEnabled() {
+        return kickIfWhitelistEnabled;
+    }
+
+    String getKickMessage() {
+        return kickMessage;
+    }
 }
