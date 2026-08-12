@@ -1,7 +1,7 @@
 [![License](https://img.shields.io/github/license/Censera/guestmode.svg)](LICENSE)
 [![Paper](https://img.shields.io/badge/paper-1.20.4-blue.svg)](https://papermc.io/)
 
-A Paper 1.20.4 plugin that puts unwhitelisted players into Adventure mode on join. When an admin adds a player to the whitelist while they are online, the plugin detects it within one second and switches their game mode to Survival.
+A Paper 1.20.x plugin that puts unwhitelisted players into Adventure mode on join. When an admin adds a player to the whitelist while they are online, the plugin detects it within one second and switches their game mode to Survival.
 
 Works with both Java and Bedrock clients. Bedrock players connect through Geyser/Floodgate; `player.isWhitelisted()` returns the correct result for them as long as they are added to the whitelist by name.
 
