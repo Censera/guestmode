@@ -1,5 +1,6 @@
 package xyz.censera.guestmode;
 
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -25,14 +26,14 @@ final class PlayerListener implements Listener {
         }
 
         if (config.isKickIfWhitelistEnabled()) {
-            player.kickPlayer(GuestMode.colorize(config.getKickMessage()));
+            player.kickPlayer(ChatColor.translateAlternateColorCodes('&', config.getKickMessage()));
             return;
         }
 
         plugin.getRegistry().add(player.getUniqueId());
         player.setGameMode(config.getGuestGameMode());
-        player.sendMessage(GuestMode.colorize(
-                config.getGuestJoinMessage().replace("%player%", player.getName())));
+        player.sendMessage(ChatColor.translateAlternateColorCodes(
+                '&', config.getGuestJoinMessage().replace("%player%", player.getName())));
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
