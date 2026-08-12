@@ -1,6 +1,7 @@
 package xyz.censera.guestmode;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
@@ -53,12 +54,12 @@ final class UpgradeTask {
     private void upgrade(Player player, PluginConfig config) {
         plugin.getRegistry().remove(player.getUniqueId());
         player.setGameMode(config.getUpgradeGameMode());
-        player.sendMessage(GuestMode.colorize(config.getUpgradeMessage()));
+        player.sendMessage(ChatColor.translateAlternateColorCodes('&', config.getUpgradeMessage()));
 
         String broadcast = config.getBroadcastOnUpgrade();
         if (!broadcast.isEmpty()) {
-            Bukkit.broadcastMessage(
-                    GuestMode.colorize(broadcast.replace("%player%", player.getName())));
+            Bukkit.broadcastMessage(ChatColor.translateAlternateColorCodes(
+                    '&', broadcast.replace("%player%", player.getName())));
         }
 
         plugin.getLogger().info(player.getName()
