@@ -1,6 +1,7 @@
 package xyz.censera.guestmode;
 
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -60,7 +61,7 @@ public final class GuestMode extends JavaPlugin {
             if (player.isWhitelisted()) {
                 registry.remove(uuid);
                 player.setGameMode(pluginConfig.getUpgradeGameMode());
-                player.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes(
+                player.sendMessage(ChatColor.translateAlternateColorCodes(
                         '&', pluginConfig.getUpgradeMessage()));
             }
         }
