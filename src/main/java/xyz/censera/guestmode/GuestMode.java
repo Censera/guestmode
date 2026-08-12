@@ -25,13 +25,12 @@ public final class GuestMode extends JavaPlugin {
         upgradeTask.start();
 
         GuestModeCommand executor = new GuestModeCommand(this);
-        var cmd = getCommand("guestmode");
-        if (cmd != null) {
-            cmd.setExecutor(executor);
-            cmd.setTabCompleter(executor);
-        } else {
-            getLogger().severe("Failed to register /guestmode — check plugin.yml.");
+        var command = getCommand("guestmode");
+        if (command == null) {
+            throw new IllegalStateException("Required command 'guestmode' is missing from plugin.yml");
         }
+        command.setExecutor(executor);
+        command.setTabCompleter(executor);
 
         getLogger().info("Enabled. Unwhitelisted players join in "
                 + pluginConfig.getGuestGameMode().name() + " mode.");
@@ -41,17 +40,15 @@ public final class GuestMode extends JavaPlugin {
     public void onDisable() {
         if (upgradeTask != null) {
             upgradeTask.cancel();
+            upgradeTask = null;
         }
         getLogger().info("Disabled.");
     }
 
-    public void reload() {
+    void reload() {
         reloadConfig();
         pluginConfig = new PluginConfig(this);
 
-        /* Re-evaluate all tracked guests after a config reload. Players whitelisted
-         * while the config was being reloaded get upgraded now. Players still not
-         * whitelisted remain in the registry with their game mode unchanged. */
         for (UUID uuid : registry.snapshot()) {
             Player player = Bukkit.getPlayer(uuid);
 
@@ -70,12 +67,15 @@ public final class GuestMode extends JavaPlugin {
         getLogger().info("Configuration reloaded.");
     }
 
-    /* Translates & color codes to section sign codes for sendMessage(String)
-     * and kickPlayer(String). Kept here so every caller uses the same method. */
-    public static String colorize(String text) {
+    static String colorize(String text) {
         return ChatColor.translateAlternateColorCodes('&', text);
     }
 
-    public GuestRegistry getRegistry()       { return registry; }
-    public PluginConfig getPluginConfig()    { return pluginConfig; }
+    GuestRegistry getRegistry() {
+        return registry;
+    }
+
+    PluginConfig getPluginConfig() {
+        return pluginConfig;
+    }
 }
