@@ -1,0 +1,32 @@
+# [GuestMode Configuration]
+# Players not on the whitelist join in Adventure mode.
+# When an admin whitelists them, they are automatically
+# switched to Survival mode (or their previous game mode).
+
+# Message shown to guests on join (supports & color codes).
+# Use %player% for the player's name.
+guest-join-message: "&eWelcome, &f%player%&e! You are in &6Guest Mode&e. You can explore but not build or break."
+
+# Message shown when a guest is upgraded to a normal player.
+# Sent to the player who was just whitelisted.
+upgrade-message: "&aYou have been whitelisted! Switching you to Survival mode."
+
+# Message broadcast to the server when a guest gets whitelisted.
+# Use %player% for the player's name. Set to "" to disable.
+broadcast-on-upgrade: "&6%player% &ahas been whitelisted and upgraded from Guest Mode!"
+
+# Game mode guests are placed in while unwhitelisted.
+# Allowed values: ADVENTURE, SPECTATOR
+guest-gamemode: ADVENTURE
+
+# Game mode guests are upgraded to when whitelisted.
+# Allowed values: SURVIVAL, CREATIVE
+upgrade-gamemode: SURVIVAL
+
+# Kick guests if the server whitelist is enabled and enforced externally.
+# When true, non-whitelisted players are kicked instead of placed in guest mode.
+# Useful if you want to use GuestMode only on a whitelist-OFF server.
+kick-if-whitelist-enabled: false
+
+# Kick message used when kick-if-whitelist-enabled is true.
+kick-message: "&cThis server is whitelisted. Contact an admin to be added."

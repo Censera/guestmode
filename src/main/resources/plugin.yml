@@ -1,0 +1,20 @@
+name: GuestMode
+version: "${project.version}"
+main: xyz.censera.guestmode.GuestMode
+api-version: "1.20"
+description: Unwhitelisted players join in Adventure mode, autoupgrades to Survival on whitelist.
+authors: [Censera]
+
+commands:
+  guestmode:
+    description: GuestMode management commands.
+    usage: /guestmode <reload|list|kick-guests>
+    permission: guestmode.admin
+
+permissions:
+  guestmode.admin:
+    description: Access to all GuestMode admin commands.
+    default: op
+  guestmode.bypass:
+    description: Join in Survival regardless of whitelist status.
+    default: op
