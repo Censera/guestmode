@@ -8,18 +8,18 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
-public final class GuestModeCommand implements CommandExecutor, TabCompleter {
+final class GuestModeCommand implements CommandExecutor, TabCompleter {
 
     private static final List<String> SUBCOMMANDS = List.of("reload", "list", "kick-guests");
 
     private final GuestMode plugin;
 
-    public GuestModeCommand(GuestMode plugin) {
+    GuestModeCommand(GuestMode plugin) {
         this.plugin = plugin;
     }
 
@@ -36,10 +36,10 @@ public final class GuestModeCommand implements CommandExecutor, TabCompleter {
         }
 
         switch (args[0].toLowerCase()) {
-            case "reload"      -> handleReload(sender);
-            case "list"        -> handleList(sender);
+            case "reload" -> handleReload(sender);
+            case "list" -> handleList(sender);
             case "kick-guests" -> handleKickGuests(sender);
-            default            -> sendUsage(sender);
+            default -> sendUsage(sender);
         }
         return true;
     }
@@ -58,20 +58,17 @@ public final class GuestModeCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-        String names = guests.stream()
-                .map(uuid -> {
-                    Player p = Bukkit.getPlayer(uuid);
-                    return p != null ? p.getName() : "(offline:" + uuid + ")";
-                })
-                .collect(Collectors.joining(", "));
+        List<String> names = new ArrayList<>(guests.size());
+        for (UUID uuid : guests) {
+            Player player = Bukkit.getPlayer(uuid);
+            names.add(player != null ? player.getName() : "(offline:" + uuid + ")");
+        }
 
         sender.sendMessage(ChatColor.GOLD + "Online guests (" + guests.size() + "): "
-                + ChatColor.WHITE + names);
+                + ChatColor.WHITE + String.join(", ", names));
     }
 
     private void handleKickGuests(CommandSender sender) {
-        /* Snapshot before kicking, kick triggers PlayerQuitEvent which calls
-         * registry.remove(), so the live set would shrink under us mid-loop. */
         Set<UUID> guests = plugin.getRegistry().snapshot();
 
         if (guests.isEmpty()) {
@@ -95,15 +92,18 @@ public final class GuestModeCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (!sender.hasPermission("guestmode.admin")) return List.of();
-
-        if (args.length == 1) {
-            String partial = args[0].toLowerCase();
-            return SUBCOMMANDS.stream()
-                    .filter(s -> s.startsWith(partial))
-                    .collect(Collectors.toList());
+        if (!sender.hasPermission("guestmode.admin") || args.length != 1) {
+            return List.of();
         }
-        return List.of();
+
+        String partial = args[0].toLowerCase();
+        List<String> matches = new ArrayList<>();
+        for (String subcommand : SUBCOMMANDS) {
+            if (subcommand.startsWith(partial)) {
+                matches.add(subcommand);
+            }
+        }
+        return matches;
     }
 
     private void sendUsage(CommandSender sender) {
