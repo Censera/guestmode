@@ -4,6 +4,8 @@ import org.bukkit.GameMode;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.Locale;
+
 final class PluginConfig {
 
     private final String guestJoinMessage;
@@ -40,23 +42,17 @@ final class PluginConfig {
             GameMode firstAllowed,
             GameMode secondAllowed) {
         String raw = requiredString(cfg, key);
+        GameMode mode;
         try {
-            GameMode mode = GameMode.valueOf(raw.toUpperCase());
-            if (mode != firstAllowed && mode != secondAllowed) {
-                throw invalidGameMode(key, raw);
-            }
-            return mode;
+            mode = GameMode.valueOf(raw.toUpperCase(Locale.ROOT));
         } catch (IllegalArgumentException e) {
-            if (e.getMessage() != null && e.getMessage().startsWith("Invalid game mode for ")) {
-                throw e;
-            }
-            throw invalidGameMode(key, raw);
+            throw new IllegalArgumentException("Invalid game mode for " + key + ": " + raw, e);
         }
-    }
 
-    private static IllegalArgumentException invalidGameMode(String key, String value) {
-        return new IllegalArgumentException(
-                "Invalid game mode for " + key + ": " + value);
+        if (mode != firstAllowed && mode != secondAllowed) {
+            throw new IllegalArgumentException("Invalid game mode for " + key + ": " + raw);
+        }
+        return mode;
     }
 
     String getGuestJoinMessage() {
