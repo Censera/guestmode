@@ -11,6 +11,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -61,6 +62,18 @@ final class AuthListener implements Listener {
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
         plugin.getAuthenticated().remove(event.getPlayer().getUniqueId());
+    }
+
+    @EventHandler
+    public void onCommand(PlayerCommandPreprocessEvent event) {
+        if (blocked(event.getPlayer())) {
+            String command = event.getMessage().toLowerCase();
+            if (!command.startsWith("/login ") && !command.equals("/login")
+                    && !command.startsWith("/register ") && !command.equals("/register")) {
+                event.setCancelled(true);
+                event.getPlayer().sendMessage(ChatColor.RED + "You must authenticate first.");
+            }
+        }
     }
 
     private boolean blocked(Player player) {
