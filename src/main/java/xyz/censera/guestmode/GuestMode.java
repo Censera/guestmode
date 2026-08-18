@@ -25,6 +25,7 @@ public final class GuestMode extends JavaPlugin {
 
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
         getServer().getPluginManager().registerEvents(new AuthListener(this), this);
+        getServer().getPluginManager().registerEvents(new GuestProtectionListener(this), this);
 
         upgradeTask = new UpgradeTask(this);
         upgradeTask.start();
@@ -41,6 +42,9 @@ public final class GuestMode extends JavaPlugin {
         getCommand("register").setExecutor(authCommand);
         getCommand("login").setExecutor(authCommand);
         getCommand("2fa").setExecutor(authCommand);
+
+        GuestCommand guestCommand = new GuestCommand(this);
+        getCommand("guest").setExecutor(guestCommand);
 
         getLogger().info("Enabled on Paper 26.2.");
     }
@@ -63,8 +67,16 @@ public final class GuestMode extends JavaPlugin {
 
         registry.add(uuid);
         player.setGameMode(pluginConfig.getGuestGameMode());
+        player.setFoodLevel(20);
         player.sendMessage(ChatColor.translateAlternateColorCodes(
                 '&', pluginConfig.getGuestJoinMessage().replace("%player%", player.getName())));
+    }
+
+    void exitGuest(Player player) {
+        UUID uuid = player.getUniqueId();
+        registry.remove(uuid);
+        player.setGameMode(pluginConfig.getUpgradeGameMode());
+        player.sendMessage(ChatColor.translateAlternateColorCodes('&', pluginConfig.getUpgradeMessage()));
     }
 
     boolean isFloodgatePlayer(UUID uuid) {
