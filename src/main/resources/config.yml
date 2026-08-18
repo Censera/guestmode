@@ -1,11 +1,15 @@
 # GuestMode
-# Offline-mode Paper authentication. Floodgate players skip authentication.
-# Premium Java auto-login is supplied by FastLogin when installed and configured.
+# Offline mode Paper authentication. Floodgate players skip authentication.
+# Premium Java auto login is supplied by FastLogin when installed and configured.
 
 guest-join-message: "&eWelcome, &f%player%&e! You are in &6Guest Mode&e."
-upgrade-message: "&aAuthentication complete. You are now a normal player."
+upgrade-message: "&aYou have been whitelisted. You are now a normal player."
 broadcast-on-upgrade: ""
 guest-gamemode: SPECTATOR
 upgrade-gamemode: SURVIVAL
 kick-if-whitelist-enabled: false
 kick-message: "&cThis server is whitelisted. Contact an admin to be added."
+
+two-factor-web-host: "127.0.0.1"
+two-factor-web-port: 0
+two-factor-web-expiry-seconds: 300
