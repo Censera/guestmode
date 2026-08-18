@@ -1,12 +1,11 @@
 package xyz.censera.guestmode;
 
-import com.github.games647.fastlogin.bukkit.FastLoginBukkit;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.geysermc.floodgate.api.FloodgateApi;
 
+import java.lang.reflect.Method;
 import java.util.Set;
 import java.util.UUID;
 
@@ -57,17 +56,39 @@ public final class GuestMode extends JavaPlugin {
     }
 
     boolean isFloodgatePlayer(UUID uuid) {
-        if (getServer().getPluginManager().getPlugin("floodgate") == null) return false;
+        if (getServer().getPluginManager().getPlugin("floodgate") == null) {
+            return false;
+        }
+
         try {
-            return FloodgateApi.getInstance().isFloodgatePlayer(uuid);
-        } catch (RuntimeException e) {
+            Class<?> apiClass = Class.forName("org.geysermc.floodgate.api.FloodgateApi");
+            Object api = apiClass.getMethod("getInstance").invoke(null);
+            Method method = apiClass.getMethod("isFloodgatePlayer", UUID.class);
+            return Boolean.TRUE.equals(method.invoke(api, uuid));
+        } catch (ReflectiveOperationException | RuntimeException e) {
             return false;
         }
     }
 
-    FastLoginBukkit getFastLogin() {
-        var plugin = getServer().getPluginManager().getPlugin("FastLogin");
-        return plugin instanceof FastLoginBukkit fastLogin && fastLogin.isEnabled() ? fastLogin : null;
+    boolean isPremiumPlayer(UUID uuid) {
+        if (getServer().getPluginManager().getPlugin("FastLogin") == null) {
+            return false;
+        }
+
+        try {
+            Class<?> pluginClass = Class.forName("com.github.games647.fastlogin.bukkit.FastLoginBukkit");
+            Object plugin = getServer().getPluginManager().getPlugin("FastLogin");
+            if (plugin == null || !pluginClass.isInstance(plugin)) {
+                return false;
+            }
+
+            Method getStatus = pluginClass.getMethod("getStatus", UUID.class);
+            Object status = getStatus.invoke(plugin, uuid);
+            return status != null && "PREMIUM".equals(status.toString());
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            getLogger().fine("FastLogin integration unavailable; using normal authentication fallback.");
+            return false;
+        }
     }
 
     void reload() {
