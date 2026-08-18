@@ -10,7 +10,6 @@ import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -24,6 +23,7 @@ final class AuthManager {
     private static final int ITERATIONS = 210_000;
     private static final int HASH_BITS = 256;
     private static final SecureRandom RANDOM = new SecureRandom();
+    private static final String BASE32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
     private final GuestMode plugin;
     private final File file;
@@ -53,19 +53,8 @@ final class AuthManager {
         }
     }
 
-    boolean isRegistered(UUID uuid) {
-        return accounts.containsKey(uuid);
-    }
-
-    boolean isAuthenticated(UUID uuid) {
-        return plugin.getAuthenticated().contains(uuid);
-    }
-
-    void unregister(UUID uuid) {
-        accounts.remove(uuid);
-        data.set(uuid.toString(), null);
-        save();
-    }
+    boolean isRegistered(UUID uuid) { return accounts.containsKey(uuid); }
+    boolean isAuthenticated(UUID uuid) { return plugin.getAuthenticated().contains(uuid); }
 
     void register(Player player, String password, Consumer<String> result) {
         UUID uuid = player.getUniqueId();
@@ -90,25 +79,24 @@ final class AuthManager {
             result.accept("not-registered");
             return;
         }
-        if (account.totpEnabled && !verifyTotp(account.totp, code)) {
-            result.accept(code == null || code.isBlank() ? "2fa-required" : "invalid-2fa");
-            return;
-        }
         verifyPasswordAsync(password, account.salt, account.password, valid ->
                 plugin.getServer().getScheduler().runTask(plugin, () -> {
-                    if (valid) {
-                        plugin.getAuthenticated().add(uuid);
-                        result.accept("ok");
-                    } else {
+                    if (!valid) {
                         result.accept("invalid-password");
+                        return;
                     }
+                    if (account.totpEnabled && !verifyTotp(account.totp, code)) {
+                        result.accept(code == null || code.isBlank() ? "2fa-required" : "invalid-2fa");
+                        return;
+                    }
+                    plugin.getAuthenticated().add(uuid);
+                    result.accept("ok");
                 }));
     }
 
     String beginTotp(Player player) {
         Account account = accounts.get(player.getUniqueId());
-        if (account == null || !isAuthenticated(player.getUniqueId())) return null;
-        if (account.totpEnabled) return null;
+        if (account == null || !isAuthenticated(player.getUniqueId()) || account.totpEnabled) return null;
         account.totp = randomBase32(20);
         write(player.getUniqueId(), account);
         return account.totp;
@@ -130,11 +118,6 @@ final class AuthManager {
         account.totpEnabled = false;
         write(player.getUniqueId(), account);
         return true;
-    }
-
-    boolean hasTotp(UUID uuid) {
-        Account account = accounts.get(uuid);
-        return account != null && account.totpEnabled;
     }
 
     private void write(UUID uuid, Account account) {
@@ -223,7 +206,6 @@ final class AuthManager {
     }
 
     private static String base32(byte[] bytes) {
-        final char[] alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".toCharArray();
         StringBuilder out = new StringBuilder((bytes.length * 8 + 4) / 5);
         int buffer = 0;
         int bits = 0;
@@ -232,10 +214,10 @@ final class AuthManager {
             bits += 8;
             while (bits >= 5) {
                 bits -= 5;
-                out.append(alphabet[(buffer >>> bits) & 31]);
+                out.append(BASE32.charAt((buffer >>> bits) & 31));
             }
         }
-        if (bits > 0) out.append(alphabet[(buffer << (5 - bits)) & 31]);
+        if (bits > 0) out.append(BASE32.charAt((buffer << (5 - bits)) & 31));
         return out.toString();
     }
 
@@ -245,7 +227,7 @@ final class AuthManager {
         int bits = 0;
         int index = 0;
         for (char c : value.toUpperCase().toCharArray()) {
-            int digit = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567".indexOf(c);
+            int digit = BASE32.indexOf(c);
             if (digit < 0) throw new IllegalArgumentException("Invalid Base32");
             buffer = (buffer << 5) | digit;
             bits += 5;
@@ -258,9 +240,7 @@ final class AuthManager {
     }
 
     String totpUri(Player player, String secret) {
-        String issuer = Base64.getUrlEncoder().withoutPadding().encodeToString(
-                "GuestMode".getBytes(StandardCharsets.UTF_8));
-        return "otpauth://totp/" + issuer + ":" + player.getName()
+        return "otpauth://totp/GuestMode:" + player.getName()
                 + "?secret=" + secret + "&issuer=GuestMode&algorithm=SHA1&digits=6&period=30";
     }
 
