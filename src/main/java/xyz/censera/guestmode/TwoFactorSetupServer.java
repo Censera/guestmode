@@ -20,6 +20,7 @@ import java.util.concurrent.TimeUnit;
 
 final class TwoFactorSetupServer {
     private static final SecureRandom RANDOM = new SecureRandom();
+    private static final int QR_SIZE = 57;
     private final GuestMode plugin;
     private HttpServer server;
     private Setup setup;
@@ -64,27 +65,29 @@ final class TwoFactorSetupServer {
     }
 
     private void handle(HttpExchange exchange) throws IOException {
-        String method = exchange.getRequestMethod();
-        String prefix = "/2fa/";
-        String path = exchange.getRequestURI().getPath();
-        Setup current;
-        synchronized (this) {
-            current = setup;
-        }
+        try (exchange) {
+            String method = exchange.getRequestMethod();
+            String prefix = "/2fa/";
+            String path = exchange.getRequestURI().getPath();
+            Setup current;
+            synchronized (this) {
+                current = setup;
+            }
 
-        if (!"GET".equalsIgnoreCase(method)) {
-            exchange.getResponseHeaders().set("Allow", "GET");
-            send(exchange, 405, "Method not allowed", "text/plain; charset=utf-8");
-            return;
-        }
+            if (!"GET".equalsIgnoreCase(method)) {
+                exchange.getResponseHeaders().set("Allow", "GET");
+                send(exchange, 405, "Method not allowed", "text/plain; charset=utf-8");
+                return;
+            }
 
-        if (current == null || !path.startsWith(prefix) || !current.token.equals(path.substring(prefix.length()))
-                || System.currentTimeMillis() - current.createdAt >= expiryMs) {
-            send(exchange, 404, "Setup link expired", "text/plain; charset=utf-8");
-            return;
-        }
+            if (current == null || !path.startsWith(prefix) || !current.token.equals(path.substring(prefix.length()))
+                    || System.currentTimeMillis() - current.createdAt >= expiryMs) {
+                send(exchange, 404, "Setup link expired", "text/plain; charset=utf-8");
+                return;
+            }
 
-        send(exchange, 200, page(current), "text/html; charset=utf-8");
+            send(exchange, 200, page(current), "text/html; charset=utf-8");
+        }
     }
 
     private static String page(Setup setup) throws IOException {
@@ -92,7 +95,7 @@ final class TwoFactorSetupServer {
         String name = escape(setup.name);
         String secret = escape(setup.secret);
         return "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>GuestMode 2FA</title>"
-                + "<style>body{font-family:system-ui,sans-serif;max-width:520px;margin:40px auto;padding:24px;color:#222}svg{display:block;width:320px;height:320px;margin:24px auto;background:#fff}code{user-select:all;word-break:break-all}button{padding:10px 14px;cursor:pointer}</style></head><body>"
+                + "<style>body{font-family:system-ui,sans-serif;max-width:520px;margin:40px auto;padding:24px;color:#222}svg{display:block;width:340px;height:340px;margin:24px auto;background:#fff}code{user-select:all;word-break:break-all}button{padding:10px 14px;cursor:pointer}</style></head><body>"
                 + "<h1>GuestMode 2FA</h1><p>Account: <strong>" + name + "</strong></p>"
                 + "<p>Scan this QR code with your authenticator app.</p>" + qr
                 + "<p>Setup key:</p><p><code id=\"secret\">" + secret + "</code></p>"
@@ -104,17 +107,23 @@ final class TwoFactorSetupServer {
     private static String qrSvg(String uri) throws IOException {
         try {
             Map<EncodeHintType, Object> hints = new HashMap<>();
-            hints.put(EncodeHintType.MARGIN, 2);
-            BitMatrix matrix = new MultiFormatWriter().encode(uri, BarcodeFormat.QR_CODE, 37, 37, hints);
+            hints.put(EncodeHintType.MARGIN, 4);
+            BitMatrix matrix = new MultiFormatWriter().encode(uri, BarcodeFormat.QR_CODE, QR_SIZE, QR_SIZE, hints);
+            int width = matrix.getWidth();
+            int height = matrix.getHeight();
             StringBuilder cells = new StringBuilder();
-            for (int y = 0; y < matrix.getHeight(); y++) {
-                for (int x = 0; x < matrix.getWidth(); x++) {
+            for (int y = 0; y < height; y++) {
+                for (int x = 0; x < width; x++) {
                     if (matrix.get(x, y)) {
-                        cells.append("<rect x=\"").append(x).append("\" y=\"").append(y).append("\" width=\"1\" height=\"1\"/>");
+                        cells.append("<rect x=\"").append(x).append("\" y=\"").append(y)
+                                .append("\" width=\"1\" height=\"1\"/>");
                     }
                 }
             }
-            return "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 37 37\" shape-rendering=\"crispEdges\"><rect width=\"37\" height=\"37\" fill=\"white\"/><g fill=\"black\">" + cells + "</g></svg>";
+            return "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 " + width + " " + height
+                    + "\" preserveAspectRatio=\"xMidYMid meet\" shape-rendering=\"crispEdges\"><rect width=\""
+                    + width + "\" height=\"" + height + "\" fill=\"white\"/><g fill=\"black\">"
+                    + cells + "</g></svg>";
         } catch (Exception e) {
             throw new IOException("Could not generate QR code", e);
         }
