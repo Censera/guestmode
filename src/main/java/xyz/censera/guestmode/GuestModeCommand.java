@@ -108,8 +108,12 @@ final class GuestModeCommand implements CommandExecutor, TabCompleter {
 
     private void sendUsage(CommandSender sender) {
         sender.sendMessage(ChatColor.GOLD + "GuestMode commands:");
-        sender.sendMessage(ChatColor.YELLOW + "  /guestmode reload");
-        sender.sendMessage(ChatColor.YELLOW + "  /guestmode list");
-        sender.sendMessage(ChatColor.YELLOW + "  /guestmode kick-guests");
+        sender.sendMessage(ChatColor.YELLOW + "  /guestmode reload" + ChatColor.GRAY + " - reload configuration");
+        sender.sendMessage(ChatColor.YELLOW + "  /guestmode list" + ChatColor.GRAY + " - list online guests");
+        sender.sendMessage(ChatColor.YELLOW + "  /guestmode kick-guests" + ChatColor.GRAY + " - kick all online guests");
+        sender.sendMessage(ChatColor.GOLD + "Authentication:");
+        sender.sendMessage(ChatColor.YELLOW + "  /register <password>" + ChatColor.GRAY + " - register an offline account");
+        sender.sendMessage(ChatColor.YELLOW + "  /login <password> [2fa-code]" + ChatColor.GRAY + " - log in");
+        sender.sendMessage(ChatColor.YELLOW + "  /2fa <enable|confirm|disable> [code]" + ChatColor.GRAY + " - manage 2FA");
     }
 }
