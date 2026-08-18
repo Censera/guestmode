@@ -1,7 +1,5 @@
 package xyz.censera.guestmode;
 
-import com.github.games647.fastlogin.bukkit.FastLoginBukkit;
-import com.github.games647.fastlogin.core.PremiumStatus;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -36,19 +34,18 @@ final class AuthListener implements Listener {
             return;
         }
 
-        FastLoginBukkit fastLogin = plugin.getFastLogin();
-        if (fastLogin != null) {
-            plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
-                if (player.isOnline() && fastLogin.getStatus(uuid) == PremiumStatus.PREMIUM) {
-                    plugin.getAuthenticated().add(uuid);
-                    player.sendMessage(ChatColor.GREEN + "Premium account authenticated.");
-                } else if (player.isOnline()) {
-                    requireLogin(player);
-                }
-            }, 10L);
-        } else {
-            requireLogin(player);
-        }
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            if (!player.isOnline() || plugin.getAuthenticated().contains(uuid)) {
+                return;
+            }
+
+            if (plugin.isPremiumPlayer(uuid)) {
+                plugin.getAuthenticated().add(uuid);
+                player.sendMessage(ChatColor.GREEN + "Premium account authenticated.");
+            } else {
+                requireLogin(player);
+            }
+        }, 20L);
     }
 
     private void requireLogin(Player player) {
