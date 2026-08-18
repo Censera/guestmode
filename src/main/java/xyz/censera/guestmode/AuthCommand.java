@@ -81,11 +81,13 @@ final class AuthCommand implements CommandExecutor {
             }
 
             String uri = plugin.getAuth().totpUri(player, secret);
-            player.sendMessage(ChatColor.GREEN + "2FA secret: " + ChatColor.WHITE + secret);
-            player.sendMessage(ChatColor.YELLOW + "Add it to your authenticator, then use /2fa confirm <code>.");
-            player.sendMessage(Component.text("[Open 2FA setup link]", NamedTextColor.AQUA)
+            player.sendMessage(ChatColor.GREEN + "Scan the QR code below with your authenticator.");
+            TotpQr.send(player, uri);
+            player.sendMessage(Component.text("[Open in authenticator]", NamedTextColor.AQUA)
                     .clickEvent(ClickEvent.openUrl(uri))
-                    .hoverEvent(HoverEvent.showText(Component.text("Open the 2FA setup URI"))));
+                    .hoverEvent(HoverEvent.showText(Component.text("Open the authenticator setup link"))));
+            player.sendMessage(ChatColor.YELLOW + "Then use /2fa confirm <code>.");
+            player.sendMessage(ChatColor.GRAY + "Backup setup key: " + ChatColor.WHITE + secret);
             return true;
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("confirm")) {
