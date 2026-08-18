@@ -4,6 +4,7 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -81,14 +82,18 @@ final class AuthCommand implements CommandExecutor {
             }
 
             String uri = plugin.getAuth().totpUri(player, secret);
-            player.sendMessage(ChatColor.GREEN + "Scan the QR code below with your authenticator.");
-            TotpQr.send(player, uri);
-            player.sendMessage(Component.text("[Copy setup link]", NamedTextColor.AQUA)
+            Component link = Component.text("[Open in authenticator]", NamedTextColor.AQUA)
+                    .decorate(TextDecoration.UNDERLINED)
                     .clickEvent(ClickEvent.copyToClipboard(uri))
-                    .hoverEvent(HoverEvent.showText(Component.text("Copy the setup URI"))));
-            player.sendMessage(ChatColor.YELLOW + "Paste the copied link into a QR scanner or authenticator that accepts otpauth links.");
+                    .hoverEvent(HoverEvent.showText(Component.text("Copy the setup link")));
+            Component key = Component.text("[Copy setup key]", NamedTextColor.AQUA)
+                    .decorate(TextDecoration.UNDERLINED)
+                    .clickEvent(ClickEvent.copyToClipboard(secret))
+                    .hoverEvent(HoverEvent.showText(Component.text("Copy the setup key")));
+
+            player.sendMessage(ChatColor.GREEN + "Set up 2FA with your authenticator.");
+            player.sendMessage(Component.text().append(link).append(Component.text("  ")).append(key).build());
             player.sendMessage(ChatColor.YELLOW + "Then use /2fa confirm <code>.");
-            player.sendMessage(ChatColor.GRAY + "Backup setup key: " + ChatColor.WHITE + secret);
             return true;
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("confirm")) {
