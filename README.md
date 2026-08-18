@@ -1,61 +1,44 @@
-[![License](https://img.shields.io/github/license/Censera/guestmode.svg)](LICENSE)
-[![Paper](https://img.shields.io/badge/paper-1.20.4-blue.svg)](https://papermc.io/)
+# GuestMode
 
-A Paper 1.20.x plugin that puts unwhitelisted players into Adventure mode on join. When an admin adds a player to the whitelist while they are online, the plugin detects it within one second and switches their game mode to Survival.
+A small Paper plugin for offline-mode servers. Unwhitelisted players enter Adventure mode, while registered players use password authentication.
 
-Works with both Java and Bedrock clients. Bedrock players connect through Geyser/Floodgate; `player.isWhitelisted()` returns the correct result for them as long as they are added to the whitelist by name.
+Targets Paper 26.2 and Java 25.
 
-## Install
+Authentication is deliberately local:
 
-Requires Java 17 and Maven 3.8+.
+- `/register <password>`
+- `/login <password> [2fa-code]`
+- `/2fa enable`
+- `/2fa confirm <code>`
+- `/2fa disable <code>`
+- Passwords use salted PBKDF2-HMAC-SHA256.
+- 2FA uses standard TOTP.
+- Accounts are stored in `plugins/GuestMode/accounts.yml`.
 
-```ts
+Bedrock players detected by Floodgate skip authentication. Premium Java auto-login is supported through the optional FastLogin integration. FastLogin performs the actual Mojang session verification; GuestMode only consumes its verified premium status. This is necessary on an offline-mode server because a Paper plugin cannot prove that an arbitrary offline-mode client owns a premium Minecraft account by checking its username alone.
+
+Geyser/Floodgate, ViaVersion, and ViaBackwards are treated as server-side compatibility layers. GuestMode does not hook their packet internals, so protocol translation does not become a maintenance dependency.
+
+## Build
+
+Requires Java 25 and Maven 3.8+.
+
+```sh
 mvn package -DskipTests
 ```
 
-Copy `target/GuestMode-1.0.2.jar` into the server's `plugins/` directory and restart.
+The resulting `GuestMode-2.0.0.jar` goes in `plugins/`.
 
-Pre-built JARs are attached to each [release](https://github.com/Censera/guestmode/releases).
+## Guest mode
 
-## Configuration
+Unwhitelisted players join in the configured guest game mode. If an administrator adds them to the whitelist while they are online, GuestMode detects it once per second and upgrades them.
 
-`plugins/GuestMode/config.yml` is created on first start with all values set to their defaults.
+## Compatibility
 
-| Key | Type | Default |
-|---|---|---|
-| `guest-join-message` | String | `&eWelcome, &f%player%&e! You are in Guest Mode...` |
-| `upgrade-message` | String | `&aYou have been whitelisted! Switching you to Survival mode.` |
-| `broadcast-on-upgrade` | String | `&6%player% &ahas been whitelisted and upgraded from Guest Mode!` |
-| `guest-gamemode` | `ADVENTURE` or `SPECTATOR` | `ADVENTURE` |
-| `upgrade-gamemode` | `SURVIVAL` or `CREATIVE` | `SURVIVAL` |
-| `kick-if-whitelist-enabled` | Boolean | `false` |
-| `kick-message` | String | `&cThis server is whitelisted. Contact an admin to be added.` |
+Paper 26.2 is the target. Geyser/Floodgate, ViaVersion, and ViaBackwards require no direct packet hooks from this plugin. Floodgate is an optional runtime dependency and is detected automatically.
 
-Color codes use `&` as the prefix. Set `broadcast-on-upgrade` to `""` to disable the server-wide announcement on upgrade.
-
-`kick-if-whitelist-enabled` kicks unwhitelisted players instead of placing them in Guest Mode. This is independent of `whitelist=true` in `server.properties`.
-
-## Commands
-
-All subcommands require `guestmode.admin`.
-
-| Command | Description |
-|---|---|
-| `/guestmode reload` | Reload `config.yml` without a restart. Players already online as guests are re-evaluated immediately. |
-| `/guestmode list` | List all players currently in Guest Mode. |
-| `/guestmode kick-guests` | Kick all current guests. |
-
-## Permissions
-
-| Node | Default | Description |
-|---|---|---|
-| `guestmode.admin` | op | Access to all `/guestmode` commands. |
-| `guestmode.bypass` | op | Joins in Survival regardless of whitelist status. |
-
-## How it works
-
-Bukkit fires no event when a player is added to the whitelist. The plugin polls all tracked guests once per second on the main thread. When `player.isWhitelisted()` returns `true` for a guest, the plugin removes them from the registry, sets their game mode, and sends the configured messages.
+FastLogin is optional. When installed, GuestMode accepts only its `PREMIUM` status as proof of premium authentication.
 
 ## License
 
-[MIT](LICENSE)
+MIT
