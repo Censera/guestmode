@@ -15,6 +15,9 @@ final class PluginConfig {
     private final GameMode upgradeGameMode;
     private final boolean kickIfWhitelistEnabled;
     private final String kickMessage;
+    private final String twoFactorWebHost;
+    private final int twoFactorWebPort;
+    private final int twoFactorWebExpirySeconds;
 
     PluginConfig(JavaPlugin plugin) {
         FileConfiguration cfg = plugin.getConfig();
@@ -26,6 +29,9 @@ final class PluginConfig {
         kickIfWhitelistEnabled = cfg.getBoolean("kick-if-whitelist-enabled");
         guestGameMode = parseGameMode(cfg, "guest-gamemode", GameMode.ADVENTURE, GameMode.SPECTATOR);
         upgradeGameMode = parseGameMode(cfg, "upgrade-gamemode", GameMode.SURVIVAL, GameMode.CREATIVE);
+        twoFactorWebHost = requiredString(cfg, "two-factor-web-host");
+        twoFactorWebPort = cfg.getInt("two-factor-web-port", 0);
+        twoFactorWebExpirySeconds = cfg.getInt("two-factor-web-expiry-seconds", 300);
     }
 
     private static String requiredString(FileConfiguration cfg, String key) {
@@ -36,11 +42,7 @@ final class PluginConfig {
         return value;
     }
 
-    private static GameMode parseGameMode(
-            FileConfiguration cfg,
-            String key,
-            GameMode firstAllowed,
-            GameMode secondAllowed) {
+    private static GameMode parseGameMode(FileConfiguration cfg, String key, GameMode firstAllowed, GameMode secondAllowed) {
         String raw = requiredString(cfg, key);
         GameMode mode;
         try {
@@ -48,38 +50,20 @@ final class PluginConfig {
         } catch (IllegalArgumentException e) {
             throw new IllegalArgumentException("Invalid game mode for " + key + ": " + raw, e);
         }
-
         if (mode != firstAllowed && mode != secondAllowed) {
             throw new IllegalArgumentException("Invalid game mode for " + key + ": " + raw);
         }
         return mode;
     }
 
-    String getGuestJoinMessage() {
-        return guestJoinMessage;
-    }
-
-    String getUpgradeMessage() {
-        return upgradeMessage;
-    }
-
-    String getBroadcastOnUpgrade() {
-        return broadcastOnUpgrade;
-    }
-
-    GameMode getGuestGameMode() {
-        return guestGameMode;
-    }
-
-    GameMode getUpgradeGameMode() {
-        return upgradeGameMode;
-    }
-
-    boolean isKickIfWhitelistEnabled() {
-        return kickIfWhitelistEnabled;
-    }
-
-    String getKickMessage() {
-        return kickMessage;
-    }
+    String getGuestJoinMessage() { return guestJoinMessage; }
+    String getUpgradeMessage() { return upgradeMessage; }
+    String getBroadcastOnUpgrade() { return broadcastOnUpgrade; }
+    GameMode getGuestGameMode() { return guestGameMode; }
+    GameMode getUpgradeGameMode() { return upgradeGameMode; }
+    boolean isKickIfWhitelistEnabled() { return kickIfWhitelistEnabled; }
+    String getKickMessage() { return kickMessage; }
+    String getTwoFactorWebHost() { return twoFactorWebHost; }
+    int getTwoFactorWebPort() { return twoFactorWebPort; }
+    int getTwoFactorWebExpirySeconds() { return twoFactorWebExpirySeconds; }
 }
