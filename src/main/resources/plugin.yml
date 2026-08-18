@@ -1,15 +1,25 @@
 name: GuestMode
 version: "${project.version}"
 main: xyz.censera.guestmode.GuestMode
-api-version: "1.20"
-description: Unwhitelisted players join in Adventure mode, autoupgrades to Survival on whitelist.
+api-version: "26.1"
+description: Guest mode and lightweight authentication for offline-mode Paper servers.
 authors: [Censera]
+softdepend: [floodgate, FastLogin, Geyser-Spigot, ViaVersion, ViaBackwards]
 
 commands:
   guestmode:
     description: GuestMode management commands.
     usage: /guestmode <reload|list|kick-guests>
     permission: guestmode.admin
+  register:
+    description: Register your offline-mode account.
+    usage: /register <password>
+  login:
+    description: Log in to your offline-mode account.
+    usage: /login <password> [2fa-code]
+  2fa:
+    description: Manage two-factor authentication.
+    usage: /2fa <enable|confirm|disable> [code]
 
 permissions:
   guestmode.admin:
