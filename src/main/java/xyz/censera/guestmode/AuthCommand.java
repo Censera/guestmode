@@ -83,9 +83,10 @@ final class AuthCommand implements CommandExecutor {
             String uri = plugin.getAuth().totpUri(player, secret);
             player.sendMessage(ChatColor.GREEN + "Scan the QR code below with your authenticator.");
             TotpQr.send(player, uri);
-            player.sendMessage(Component.text("[Open in authenticator]", NamedTextColor.AQUA)
-                    .clickEvent(ClickEvent.openUrl(uri))
-                    .hoverEvent(HoverEvent.showText(Component.text("Open the authenticator setup link"))));
+            player.sendMessage(Component.text("[Copy setup link]", NamedTextColor.AQUA)
+                    .clickEvent(ClickEvent.copyToClipboard(uri))
+                    .hoverEvent(HoverEvent.showText(Component.text("Copy the setup URI"))));
+            player.sendMessage(ChatColor.YELLOW + "Paste the copied link into a QR scanner or authenticator that accepts otpauth links.");
             player.sendMessage(ChatColor.YELLOW + "Then use /2fa confirm <code>.");
             player.sendMessage(ChatColor.GRAY + "Backup setup key: " + ChatColor.WHITE + secret);
             return true;
