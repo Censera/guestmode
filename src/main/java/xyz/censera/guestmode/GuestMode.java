@@ -14,6 +14,7 @@ public final class GuestMode extends JavaPlugin {
     private PluginConfig pluginConfig;
     private UpgradeTask upgradeTask;
     private AuthManager auth;
+    private TwoFactorSetupServer twoFactorSetupServer;
     private final Set<UUID> authenticated = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
     @Override
@@ -22,6 +23,7 @@ public final class GuestMode extends JavaPlugin {
         pluginConfig = new PluginConfig(this);
         registry = new GuestRegistry();
         auth = new AuthManager(this);
+        twoFactorSetupServer = new TwoFactorSetupServer(this);
 
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
         getServer().getPluginManager().registerEvents(new AuthListener(this), this);
@@ -55,6 +57,10 @@ public final class GuestMode extends JavaPlugin {
             upgradeTask.cancel();
             upgradeTask = null;
         }
+        if (twoFactorSetupServer != null) {
+            twoFactorSetupServer.stop();
+            twoFactorSetupServer = null;
+        }
         authenticated.clear();
         getLogger().info("Disabled.");
     }
@@ -68,6 +74,7 @@ public final class GuestMode extends JavaPlugin {
         registry.add(uuid);
         player.setGameMode(pluginConfig.getGuestGameMode());
         player.setFoodLevel(20);
+        player.setSaturation(20);
         player.sendMessage(ChatColor.translateAlternateColorCodes(
                 '&', pluginConfig.getGuestJoinMessage().replace("%player%", player.getName())));
     }
@@ -83,7 +90,6 @@ public final class GuestMode extends JavaPlugin {
         if (getServer().getPluginManager().getPlugin("floodgate") == null) {
             return false;
         }
-
         try {
             Class<?> apiClass = Class.forName("org.geysermc.floodgate.api.FloodgateApi");
             Object api = apiClass.getMethod("getInstance").invoke(null);
@@ -98,14 +104,12 @@ public final class GuestMode extends JavaPlugin {
         if (getServer().getPluginManager().getPlugin("FastLogin") == null) {
             return false;
         }
-
         try {
             Class<?> pluginClass = Class.forName("com.github.games647.fastlogin.bukkit.FastLoginBukkit");
             Object plugin = getServer().getPluginManager().getPlugin("FastLogin");
             if (plugin == null || !pluginClass.isInstance(plugin)) {
                 return false;
             }
-
             Method getStatus = pluginClass.getMethod("getStatus", UUID.class);
             Object status = getStatus.invoke(plugin, uuid);
             return status != null && "PREMIUM".equals(status.toString());
@@ -115,11 +119,14 @@ public final class GuestMode extends JavaPlugin {
         }
     }
 
+    String startTwoFactorSetup(Player player, String secret) throws java.io.IOException {
+        return twoFactorSetupServer.start(new TwoFactorSetupServer.PlayerSetup(
+                player.getUniqueId(), player.getName(), secret, auth.totpUri(player, secret)));
+    }
+
     void reload() {
         reloadConfig();
-        PluginConfig newConfig = new PluginConfig(this);
-        pluginConfig = newConfig;
-
+        pluginConfig = new PluginConfig(this);
         for (UUID uuid : registry.snapshot()) {
             Player player = Bukkit.getPlayer(uuid);
             if (player == null || !player.isOnline()) {
