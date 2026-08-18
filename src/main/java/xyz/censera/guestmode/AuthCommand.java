@@ -53,7 +53,7 @@ final class AuthCommand implements CommandExecutor {
 
     private boolean login(Player player, String[] args) {
         if (args.length < 1 || args.length > 2) {
-            player.sendMessage(ChatColor.YELLOW + "Usage: /login <password> [2fa-code]");
+            player.sendMessage(ChatColor.YELLOW + "Usage: /login <password> [2FA code]");
             return true;
         }
         plugin.getAuth().login(player, args[0], args.length == 2 ? args[1] : null, result -> {
