@@ -7,7 +7,7 @@
 
     <groupId>xyz.censera</groupId>
     <artifactId>GuestMode</artifactId>
-    <version>3.3.1</version>
+    <version>3.3.2</version>
     <packaging>jar</packaging>
 
     <name>GuestMode</name>
@@ -56,7 +56,7 @@
         <dependency>
             <groupId>com.google.zxing</groupId>
             <artifactId>core</artifactId>
-            <version>3.5.5</version>
+            <version>3.5.4</version>
         </dependency>
     </dependencies>
 
