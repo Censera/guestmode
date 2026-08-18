@@ -11,6 +11,9 @@ commands:
     description: GuestMode management commands.
     usage: /guestmode <reload|list|kick-guests>
     permission: guestmode.admin
+  guest:
+    description: Guest Mode utility commands.
+    usage: /guest <unstuck|nudge>
   register:
     description: Register your offline-mode account.
     usage: /register <password>
@@ -23,8 +26,8 @@ commands:
 
 permissions:
   guestmode.admin:
-    description: Access to all GuestMode admin commands.
+    description: Access to all /guestmode administration commands.
     default: op
   guestmode.bypass:
-    description: Join in Survival regardless of whitelist status.
+    description: Skip Guest Mode and authentication.
     default: op
