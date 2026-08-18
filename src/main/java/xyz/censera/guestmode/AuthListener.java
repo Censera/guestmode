@@ -43,8 +43,7 @@ final class AuthListener implements Listener {
 
             if (plugin.isPremiumPlayer(uuid)) {
                 plugin.getAuthenticated().add(uuid);
-                plugin.exitGuest(player);
-                player.sendMessage(ChatColor.GREEN + "Premium account authenticated.");
+                player.sendMessage(ChatColor.GREEN + "Premium account authenticated. You remain in Guest Mode until whitelisted.");
             } else if (plugin.getAuth().isRegistered(uuid)) {
                 player.sendMessage(ChatColor.YELLOW + "Please log in with /login <password> [2fa-code].");
             }
