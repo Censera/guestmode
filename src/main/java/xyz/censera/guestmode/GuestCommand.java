@@ -61,7 +61,7 @@ final class GuestCommand implements CommandExecutor {
         long remaining = NUDGE_COOLDOWN_MS - (now - last);
         if (remaining > 0) {
             player.sendMessage(ChatColor.YELLOW + "Nudge is on cooldown for "
-                    + ((remaining + 999) / 1000) + "s.");
+                    + ((remaining + 999) / 1000) + " seconds.");
             return;
         }
 
@@ -73,7 +73,7 @@ final class GuestCommand implements CommandExecutor {
 
     private void sendUsage(Player player) {
         player.sendMessage(ChatColor.GOLD + "Guest commands:");
-        player.sendMessage(ChatColor.YELLOW + "  /guest unstuck" + ChatColor.GRAY + " - teleport to bed spawn or world spawn");
-        player.sendMessage(ChatColor.YELLOW + "  /guest nudge" + ChatColor.GRAY + " - teleport 10 blocks upward (30s cooldown)");
+        player.sendMessage(ChatColor.YELLOW + "  /guest unstuck" + ChatColor.GRAY + "  Teleport to your bed spawn or world spawn.");
+        player.sendMessage(ChatColor.YELLOW + "  /guest nudge" + ChatColor.GRAY + "  Teleport 10 blocks upward. 30 second cooldown.");
     }
 }
