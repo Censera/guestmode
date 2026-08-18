@@ -11,6 +11,8 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
+import java.io.IOException;
+
 final class AuthCommand implements CommandExecutor {
     private final GuestMode plugin;
 
@@ -81,19 +83,26 @@ final class AuthCommand implements CommandExecutor {
                 return true;
             }
 
-            String uri = plugin.getAuth().totpUri(player, secret);
-            Component link = Component.text("[Open in authenticator]", NamedTextColor.AQUA)
+            String url;
+            try {
+                url = plugin.startTwoFactorSetup(player, secret);
+            } catch (IOException e) {
+                player.sendMessage(ChatColor.RED + "Could not start the 2FA setup page.");
+                plugin.getLogger().warning("Could not start 2FA setup page: " + e.getMessage());
+                return true;
+            }
+
+            Component open = Component.text("[Open 2FA setup page]", NamedTextColor.AQUA)
                     .decorate(TextDecoration.UNDERLINED)
-                    .clickEvent(ClickEvent.copyToClipboard(uri))
-                    .hoverEvent(HoverEvent.showText(Component.text("Copy the setup link")));
-            Component key = Component.text("[Copy setup key]", NamedTextColor.AQUA)
+                    .clickEvent(ClickEvent.openUrl(url))
+                    .hoverEvent(HoverEvent.showText(Component.text("Open the temporary setup page")));
+            Component copy = Component.text("[Copy setup key]", NamedTextColor.AQUA)
                     .decorate(TextDecoration.UNDERLINED)
                     .clickEvent(ClickEvent.copyToClipboard(secret))
                     .hoverEvent(HoverEvent.showText(Component.text("Copy the setup key")));
 
-            player.sendMessage(ChatColor.GREEN + "Set up 2FA with your authenticator.");
-            player.sendMessage(Component.text().append(link).append(Component.text("  ")).append(key).build());
-            player.sendMessage(ChatColor.YELLOW + "Then use /2fa confirm <code>.");
+            player.sendMessage(Component.text().append(open).append(Component.text("  ")).append(copy).build());
+            player.sendMessage(ChatColor.YELLOW + "Add the account with your authenticator, then use /2fa confirm <code>.");
             return true;
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("confirm")) {
