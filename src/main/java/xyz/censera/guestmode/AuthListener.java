@@ -5,13 +5,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
-import org.bukkit.event.player.PlayerDropItemEvent;
-import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
@@ -34,6 +28,14 @@ final class AuthListener implements Listener {
             return;
         }
 
+        if (player.hasPermission("guestmode.bypass") || player.isWhitelisted()) {
+            plugin.getAuthenticated().add(uuid);
+            return;
+        }
+
+        plugin.enterGuest(player);
+        player.sendMessage(ChatColor.YELLOW + "Please log in with /login <password> or register with /register <password>.");
+
         plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
             if (!player.isOnline() || plugin.getAuthenticated().contains(uuid)) {
                 return;
@@ -41,19 +43,12 @@ final class AuthListener implements Listener {
 
             if (plugin.isPremiumPlayer(uuid)) {
                 plugin.getAuthenticated().add(uuid);
+                plugin.getRegistry().remove(uuid);
                 player.sendMessage(ChatColor.GREEN + "Premium account authenticated.");
-            } else {
-                requireLogin(player);
+            } else if (plugin.getAuth().isRegistered(uuid)) {
+                player.sendMessage(ChatColor.YELLOW + "Please log in with /login <password> [2fa-code].");
             }
         }, 20L);
-    }
-
-    private void requireLogin(Player player) {
-        if (plugin.getAuth().isRegistered(player.getUniqueId())) {
-            player.sendMessage(ChatColor.YELLOW + "Please log in with /login <password> [2fa-code].");
-        } else {
-            player.sendMessage(ChatColor.YELLOW + "Please register with /register <password>.");
-        }
     }
 
     @EventHandler
@@ -66,7 +61,8 @@ final class AuthListener implements Listener {
         if (blocked(event.getPlayer())) {
             String command = event.getMessage().toLowerCase();
             if (!command.startsWith("/login ") && !command.equals("/login")
-                    && !command.startsWith("/register ") && !command.equals("/register")) {
+                    && !command.startsWith("/register ") && !command.equals("/register")
+                    && !command.startsWith("/guest ") && !command.equals("/guest")) {
                 event.setCancelled(true);
                 event.getPlayer().sendMessage(ChatColor.RED + "You must authenticate first.");
             }
@@ -76,11 +72,4 @@ final class AuthListener implements Listener {
     private boolean blocked(Player player) {
         return !plugin.getAuthenticated().contains(player.getUniqueId());
     }
-
-    @EventHandler public void onBreak(BlockBreakEvent event) { if (blocked(event.getPlayer())) event.setCancelled(true); }
-    @EventHandler public void onPlace(BlockPlaceEvent event) { if (blocked(event.getPlayer())) event.setCancelled(true); }
-    @EventHandler public void onDamage(EntityDamageByEntityEvent event) { if (event.getDamager() instanceof Player p && blocked(p)) event.setCancelled(true); }
-    @EventHandler public void onInventory(InventoryOpenEvent event) { if (event.getPlayer() instanceof Player p && blocked(p)) event.setCancelled(true); }
-    @EventHandler public void onDrop(PlayerDropItemEvent event) { if (blocked(event.getPlayer())) event.setCancelled(true); }
-    @EventHandler public void onInteract(PlayerInteractEvent event) { if (blocked(event.getPlayer())) event.setCancelled(true); }
 }
