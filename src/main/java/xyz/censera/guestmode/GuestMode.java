@@ -55,6 +55,18 @@ public final class GuestMode extends JavaPlugin {
         getLogger().info("Disabled.");
     }
 
+    void enterGuest(Player player) {
+        UUID uuid = player.getUniqueId();
+        if (registry.snapshot().contains(uuid)) {
+            return;
+        }
+
+        registry.add(uuid);
+        player.setGameMode(pluginConfig.getGuestGameMode());
+        player.sendMessage(ChatColor.translateAlternateColorCodes(
+                '&', pluginConfig.getGuestJoinMessage().replace("%player%", player.getName())));
+    }
+
     boolean isFloodgatePlayer(UUID uuid) {
         if (getServer().getPluginManager().getPlugin("floodgate") == null) {
             return false;
