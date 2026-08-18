@@ -1,5 +1,9 @@
 package xyz.censera.guestmode;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.event.ClickEvent;
+import net.kyori.adventure.text.event.HoverEvent;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -39,11 +43,7 @@ final class AuthCommand implements CommandExecutor {
         }
         plugin.getAuth().register(player, args[0], result -> {
             switch (result) {
-                case "ok" -> {
-                    plugin.getAuthenticated().add(player.getUniqueId());
-                    plugin.exitGuest(player);
-                    player.sendMessage(ChatColor.GREEN + "Registered and logged in.");
-                }
+                case "ok" -> player.sendMessage(ChatColor.GREEN + "Registered and logged in. You remain in Guest Mode until whitelisted.");
                 case "already-registered" -> player.sendMessage(ChatColor.RED + "You are already registered.");
                 default -> player.sendMessage(ChatColor.RED + "Registration failed.");
             }
@@ -58,11 +58,7 @@ final class AuthCommand implements CommandExecutor {
         }
         plugin.getAuth().login(player, args[0], args.length == 2 ? args[1] : null, result -> {
             switch (result) {
-                case "ok" -> {
-                    plugin.getAuthenticated().add(player.getUniqueId());
-                    plugin.exitGuest(player);
-                    player.sendMessage(ChatColor.GREEN + "Logged in.");
-                }
+                case "ok" -> player.sendMessage(ChatColor.GREEN + "Logged in. You remain in Guest Mode until whitelisted.");
                 case "not-registered" -> player.sendMessage(ChatColor.RED + "You are not registered. Use /register <password>.");
                 case "2fa-required" -> player.sendMessage(ChatColor.RED + "Your account requires a 2FA code.");
                 case "invalid-2fa" -> player.sendMessage(ChatColor.RED + "Invalid 2FA code.");
@@ -83,9 +79,13 @@ final class AuthCommand implements CommandExecutor {
                 player.sendMessage(ChatColor.RED + "2FA is already enabled.");
                 return true;
             }
+
+            String uri = plugin.getAuth().totpUri(player, secret);
             player.sendMessage(ChatColor.GREEN + "2FA secret: " + ChatColor.WHITE + secret);
             player.sendMessage(ChatColor.YELLOW + "Add it to your authenticator, then use /2fa confirm <code>.");
-            player.sendMessage(ChatColor.GRAY + plugin.getAuth().totpUri(player, secret));
+            player.sendMessage(Component.text("[Open 2FA setup link]", NamedTextColor.AQUA)
+                    .clickEvent(ClickEvent.openUrl(uri))
+                    .hoverEvent(HoverEvent.showText(Component.text("Open the 2FA setup URI"))));
             return true;
         }
         if (args.length == 2 && args[0].equalsIgnoreCase("confirm")) {
