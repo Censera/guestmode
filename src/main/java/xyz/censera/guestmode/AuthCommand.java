@@ -46,8 +46,8 @@ final class AuthCommand implements CommandExecutor {
         }
         plugin.getAuth().register(player, args[0], result -> {
             switch (result) {
-                case "ok" -> player.sendMessage(ChatColor.GREEN + "Registered and logged in. You remain in Guest Mode until whitelisted.");
-                case "already-registered" -> player.sendMessage(ChatColor.RED + "You are already registered.");
+                case "ok" -> player.sendMessage(ChatColor.GREEN + "Registered and logged in.");
+                case "already-registered" -> player.sendMessage(ChatColor.RED + "You are already registered. Enjoy <3");
                 default -> player.sendMessage(ChatColor.RED + "Registration failed.");
             }
         });
@@ -61,7 +61,7 @@ final class AuthCommand implements CommandExecutor {
         }
         plugin.getAuth().login(player, args[0], args.length == 2 ? args[1] : null, result -> {
             switch (result) {
-                case "ok" -> player.sendMessage(ChatColor.GREEN + "Logged in. You remain in Guest Mode until whitelisted.");
+                case "ok" -> player.sendMessage(ChatColor.GREEN + "Logged in. Enjoy <3");
                 case "not-registered" -> player.sendMessage(ChatColor.RED + "You are not registered. Use /register <password>.");
                 case "2fa-required" -> player.sendMessage(ChatColor.RED + "Your account requires a 2FA code.");
                 case "invalid-2fa" -> player.sendMessage(ChatColor.RED + "Invalid 2FA code.");
