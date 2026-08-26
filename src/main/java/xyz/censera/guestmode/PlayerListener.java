@@ -19,11 +19,11 @@ final class PlayerListener implements Listener {
         Player player = event.getPlayer();
         PluginConfig config = plugin.getPluginConfig();
 
-        if (player.hasPermission("guestmode.bypass") || player.isWhitelisted()) {
+        if (player.hasPermission("eyes.bypass")) {
             return;
         }
 
-        if (config.isKickIfWhitelistEnabled()) {
+        if (config.isKickIfWhitelistEnabled() && !player.isWhitelisted()) {
             player.kickPlayer(ChatColor.translateAlternateColorCodes('&', config.getKickMessage()));
             return;
         }
