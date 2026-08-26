@@ -9,6 +9,7 @@ import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
+import java.util.Locale;
 import java.util.UUID;
 
 final class AuthListener implements Listener {
@@ -23,7 +24,7 @@ final class AuthListener implements Listener {
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
 
-        if (plugin.isFloodgatePlayer(uuid) || player.hasPermission("eyes.bypass")) {
+        if (player.hasPermission("eyes.bypass") || plugin.isFloodgatePlayer(uuid)) {
             plugin.getAuthenticated().add(uuid);
             return;
         }
@@ -52,18 +53,17 @@ final class AuthListener implements Listener {
 
     @EventHandler
     public void onCommand(PlayerCommandPreprocessEvent event) {
-        if (blocked(event.getPlayer())) {
-            String command = event.getMessage().toLowerCase();
-            if (!command.startsWith("/login ") && !command.equals("/login")
-                    && !command.startsWith("/register ") && !command.equals("/register")
-                    && !command.startsWith("/guest ") && !command.equals("/guest")) {
-                event.setCancelled(true);
-                event.getPlayer().sendMessage(ChatColor.RED + "You must authenticate first.");
-            }
+        Player player = event.getPlayer();
+        if (plugin.getAuthenticated().contains(player.getUniqueId())) {
+            return;
         }
-    }
 
-    private boolean blocked(Player player) {
-        return !plugin.getAuthenticated().contains(player.getUniqueId());
+        String command = event.getMessage().toLowerCase(Locale.ROOT);
+        if (!command.startsWith("/login ") && !command.equals("/login")
+                && !command.startsWith("/register ") && !command.equals("/register")
+                && !command.startsWith("/guest ") && !command.equals("/guest")) {
+            event.setCancelled(true);
+            player.sendMessage(ChatColor.RED + "You must authenticate first.");
+        }
     }
 }
