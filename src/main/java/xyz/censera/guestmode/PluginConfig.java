@@ -7,14 +7,11 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.util.Locale;
 
 final class PluginConfig {
-
     private final String guestJoinMessage;
     private final String upgradeMessage;
     private final String broadcastOnUpgrade;
     private final GameMode guestGameMode;
     private final GameMode upgradeGameMode;
-    private final boolean kickIfWhitelistEnabled;
-    private final String kickMessage;
     private final String twoFactorWebHost;
     private final int twoFactorWebPort;
     private final int twoFactorWebExpirySeconds;
@@ -25,19 +22,24 @@ final class PluginConfig {
         guestJoinMessage = requiredString(cfg, "guest-join-message");
         upgradeMessage = requiredString(cfg, "upgrade-message");
         broadcastOnUpgrade = requiredString(cfg, "broadcast-on-upgrade");
-        kickMessage = requiredString(cfg, "kick-message");
-        kickIfWhitelistEnabled = cfg.getBoolean("kick-if-whitelist-enabled");
         guestGameMode = parseGameMode(cfg, "guest-gamemode", GameMode.ADVENTURE, GameMode.SPECTATOR);
         upgradeGameMode = parseGameMode(cfg, "upgrade-gamemode", GameMode.SURVIVAL, GameMode.CREATIVE);
         twoFactorWebHost = requiredString(cfg, "two-factor-web-host");
         twoFactorWebPort = cfg.getInt("two-factor-web-port", 0);
         twoFactorWebExpirySeconds = cfg.getInt("two-factor-web-expiry-seconds", 300);
+
+        if (twoFactorWebPort < 0 || twoFactorWebPort > 65535) {
+            throw new IllegalArgumentException("Invalid two-factor-web-port: " + twoFactorWebPort);
+        }
+        if (twoFactorWebExpirySeconds <= 0) {
+            throw new IllegalArgumentException("Invalid two-factor-web-expiry-seconds: " + twoFactorWebExpirySeconds);
+        }
     }
 
     private static String requiredString(FileConfiguration cfg, String key) {
         String value = cfg.getString(key);
-        if (value == null) {
-            throw new IllegalArgumentException("Missing required configuration: " + key);
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("Missing or empty required configuration: " + key);
         }
         return value;
     }
@@ -61,8 +63,6 @@ final class PluginConfig {
     String getBroadcastOnUpgrade() { return broadcastOnUpgrade; }
     GameMode getGuestGameMode() { return guestGameMode; }
     GameMode getUpgradeGameMode() { return upgradeGameMode; }
-    boolean isKickIfWhitelistEnabled() { return kickIfWhitelistEnabled; }
-    String getKickMessage() { return kickMessage; }
     String getTwoFactorWebHost() { return twoFactorWebHost; }
     int getTwoFactorWebPort() { return twoFactorWebPort; }
     int getTwoFactorWebExpirySeconds() { return twoFactorWebExpirySeconds; }
