@@ -5,7 +5,6 @@ import java.util.Set;
 import java.util.UUID;
 
 final class GuestRegistry {
-
     private final Set<UUID> guests = new HashSet<>();
 
     void add(UUID uuid) {
@@ -14,6 +13,10 @@ final class GuestRegistry {
 
     void remove(UUID uuid) {
         guests.remove(uuid);
+    }
+
+    boolean contains(UUID uuid) {
+        return guests.contains(uuid);
     }
 
     Set<UUID> snapshot() {
