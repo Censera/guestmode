@@ -9,10 +9,9 @@ import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
-import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -27,6 +26,8 @@ import java.util.function.Consumer;
 final class AuthManager {
     private static final int ITERATIONS = 210_000;
     private static final int HASH_BITS = 256;
+    private static final long RATE_LIMIT_BASE_MS = 2_000L;
+    private static final long RATE_LIMIT_MAX_MS = 60_000L;
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String BASE32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
 
@@ -35,6 +36,7 @@ final class AuthManager {
     private final YamlConfiguration data;
     private final Map<UUID, Account> accounts = new HashMap<>();
     private final Set<UUID> registrationsInProgress = new HashSet<>();
+    private final Map<UUID, FailureState> failures = new HashMap<>();
 
     AuthManager(GuestMode plugin) {
         this.plugin = plugin;
@@ -45,14 +47,10 @@ final class AuthManager {
     }
 
     private void migrateLegacyAccounts() {
-        if (file.exists()) {
-            return;
-        }
+        if (file.exists()) return;
 
         File oldFile = new File(plugin.getDataFolder().getParentFile(), "GuestMode/accounts.yml");
-        if (!oldFile.isFile()) {
-            return;
-        }
+        if (!oldFile.isFile()) return;
 
         try {
             plugin.getDataFolder().mkdirs();
@@ -73,7 +71,7 @@ final class AuthManager {
                     accounts.put(uuid, new Account(hash, salt,
                             data.getString(raw + ".totp"), data.getBoolean(raw + ".totp-enabled")));
                 }
-            } catch (IllegalArgumentException ignored) {
+            } catch (IllegalArgumentException e) {
                 plugin.getLogger().warning("Ignoring invalid account entry: " + raw);
             }
         }
@@ -102,6 +100,7 @@ final class AuthManager {
             try {
                 write(uuid, account);
                 plugin.getAuthenticated().add(uuid);
+                failures.remove(uuid);
                 result.accept("ok");
             } catch (IllegalStateException e) {
                 accounts.remove(uuid);
@@ -118,16 +117,25 @@ final class AuthManager {
             return;
         }
 
+        long remaining = rateLimitRemaining(uuid);
+        if (remaining > 0) {
+            result.accept("rate-limited:" + ((remaining + 999) / 1000));
+            return;
+        }
+
         verifyPasswordAsync(password, account.salt, account.password, valid ->
                 plugin.getServer().getScheduler().runTask(plugin, () -> {
                     if (!valid) {
+                        recordFailure(uuid);
                         result.accept("invalid-password");
                         return;
                     }
                     if (account.totpEnabled && !verifyTotp(account.totp, code)) {
+                        recordFailure(uuid);
                         result.accept(code == null || code.isBlank() ? "2fa-required" : "invalid-2fa");
                         return;
                     }
+                    failures.remove(uuid);
                     plugin.getAuthenticated().add(uuid);
                     result.accept("ok");
                 }));
@@ -135,9 +143,7 @@ final class AuthManager {
 
     String beginTotp(Player player) {
         Account account = accounts.get(player.getUniqueId());
-        if (account == null || !isAuthenticated(player.getUniqueId()) || account.totpEnabled) {
-            return null;
-        }
+        if (account == null || !isAuthenticated(player.getUniqueId()) || account.totpEnabled) return null;
         account.totp = randomBase32(20);
         write(player.getUniqueId(), account);
         return account.totp;
@@ -145,12 +151,8 @@ final class AuthManager {
 
     boolean confirmTotp(Player player, String code) {
         Account account = accounts.get(player.getUniqueId());
-        if (account == null || account.totp == null || account.totpEnabled || !isAuthenticated(player.getUniqueId())) {
-            return false;
-        }
-        if (!verifyTotp(account.totp, code)) {
-            return false;
-        }
+        if (account == null || account.totp == null || account.totpEnabled || !isAuthenticated(player.getUniqueId())) return false;
+        if (!verifyTotp(account.totp, code)) return false;
         account.totpEnabled = true;
         write(player.getUniqueId(), account);
         return true;
@@ -159,16 +161,31 @@ final class AuthManager {
     boolean disableTotp(Player player, String code) {
         UUID uuid = player.getUniqueId();
         Account account = accounts.get(uuid);
-        if (account == null || !account.totpEnabled || !isAuthenticated(uuid)) {
-            return false;
-        }
-        if (!verifyTotp(account.totp, code)) {
-            return false;
-        }
+        if (account == null || !account.totpEnabled || !isAuthenticated(uuid)) return false;
+        if (!verifyTotp(account.totp, code)) return false;
         account.totp = null;
         account.totpEnabled = false;
         write(uuid, account);
         return true;
+    }
+
+    private void recordFailure(UUID uuid) {
+        FailureState state = failures.computeIfAbsent(uuid, ignored -> new FailureState());
+        state.attempts = Math.min(state.attempts + 1, 31);
+        long delay = RATE_LIMIT_BASE_MS << Math.min(state.attempts - 1, 5);
+        state.retryAt = System.currentTimeMillis() + Math.min(delay, RATE_LIMIT_MAX_MS);
+    }
+
+    private long rateLimitRemaining(UUID uuid) {
+        FailureState state = failures.get(uuid);
+        if (state == null) return 0;
+
+        long remaining = state.retryAt - System.currentTimeMillis();
+        if (remaining <= 0) {
+            failures.remove(uuid);
+            return 0;
+        }
+        return remaining;
     }
 
     private void write(UUID uuid, Account account) {
@@ -315,5 +332,10 @@ final class AuthManager {
             this.totp = totp;
             this.totpEnabled = totpEnabled;
         }
+    }
+
+    private static final class FailureState {
+        int attempts;
+        long retryAt;
     }
 }
