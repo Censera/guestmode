@@ -1,7 +1,6 @@
 package xyz.censera.guestmode;
 
 import org.bukkit.ChatColor;
-import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -27,7 +26,7 @@ final class GuestCommand implements CommandExecutor {
             return true;
         }
 
-        if (!plugin.getRegistry().snapshot().contains(player.getUniqueId())) {
+        if (!plugin.getRegistry().contains(player.getUniqueId())) {
             player.sendMessage(ChatColor.RED + "This command is only available in Guest Mode.");
             return true;
         }
@@ -46,9 +45,8 @@ final class GuestCommand implements CommandExecutor {
     }
 
     private void unstuck(Player player) {
-        Location target = player.getWorld().getSpawnLocation().clone().add(0.5, 0.1, 0.5);
-        player.teleport(target);
-        player.sendMessage(ChatColor.GREEN + "Teleported to world spawn.");
+        plugin.moveGuestToSafeLocation(player);
+        player.sendMessage(ChatColor.GREEN + "Teleported to a safe location.");
     }
 
     private void nudge(Player player) {
@@ -62,6 +60,10 @@ final class GuestCommand implements CommandExecutor {
         }
 
         Location target = player.getLocation().clone().add(0, 10, 0);
+        if (!plugin.isGuestWorld(target.getWorld()) || !plugin.isWithinGuestBoundary(target)) {
+            player.sendMessage(ChatColor.RED + "You cannot move outside Guest Mode's safe area.");
+            return;
+        }
         player.teleport(target);
         nudgeCooldowns.put(player.getUniqueId(), now);
         player.sendMessage(ChatColor.GREEN + "Nudged 10 blocks upward.");
@@ -69,7 +71,7 @@ final class GuestCommand implements CommandExecutor {
 
     private void sendUsage(Player player) {
         player.sendMessage(ChatColor.GOLD + "Guest commands:");
-        player.sendMessage(ChatColor.YELLOW + "  /guest unstuck" + ChatColor.GRAY + "  Teleport to world spawn.");
+        player.sendMessage(ChatColor.YELLOW + "  /guest unstuck" + ChatColor.GRAY + "  Return to a safe location.");
         player.sendMessage(ChatColor.YELLOW + "  /guest nudge" + ChatColor.GRAY + "  Teleport 10 blocks upward. 30 second cooldown.");
     }
 }
