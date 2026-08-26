@@ -23,12 +23,7 @@ final class AuthListener implements Listener {
         Player player = event.getPlayer();
         UUID uuid = player.getUniqueId();
 
-        if (plugin.isFloodgatePlayer(uuid)) {
-            plugin.getAuthenticated().add(uuid);
-            return;
-        }
-
-        if (player.hasPermission("guestmode.bypass") || player.isWhitelisted()) {
+        if (plugin.isFloodgatePlayer(uuid) || player.hasPermission("eyes.bypass")) {
             plugin.getAuthenticated().add(uuid);
             return;
         }
@@ -43,7 +38,7 @@ final class AuthListener implements Listener {
 
             if (plugin.isPremiumPlayer(uuid)) {
                 plugin.getAuthenticated().add(uuid);
-                player.sendMessage(ChatColor.GREEN + "Premium account authenticated. You remain in Guest Mode until whitelisted.");
+                player.sendMessage(ChatColor.GREEN + "Premium account authenticated.");
             } else if (plugin.getAuth().isRegistered(uuid)) {
                 player.sendMessage(ChatColor.YELLOW + "Please log in with /login <password> [2fa-code].");
             }
