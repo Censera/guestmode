@@ -9,7 +9,6 @@ import org.bukkit.scheduler.BukkitTask;
 import java.util.UUID;
 
 final class UpgradeTask {
-
     private final GuestMode plugin;
     private BukkitTask task;
 
@@ -52,8 +51,9 @@ final class UpgradeTask {
     }
 
     private void upgrade(Player player, PluginConfig config) {
-        plugin.getRegistry().remove(player.getUniqueId());
-        player.setGameMode(config.getUpgradeGameMode());
+        plugin.moveGuestToSafeLocation(player);
+        plugin.exitGuest(player);
+
         player.sendMessage(ChatColor.translateAlternateColorCodes('&', config.getUpgradeMessage()));
 
         String broadcast = config.getBroadcastOnUpgrade();
