@@ -9,15 +9,18 @@ import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
+import java.nio.ByteBuffer;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Consumer;
 
@@ -31,6 +34,7 @@ final class AuthManager {
     private final File file;
     private final YamlConfiguration data;
     private final Map<UUID, Account> accounts = new HashMap<>();
+    private final Set<UUID> registrationsInProgress = new HashSet<>();
 
     AuthManager(GuestMode plugin) {
         this.plugin = plugin;
@@ -75,22 +79,34 @@ final class AuthManager {
         }
     }
 
-    boolean isRegistered(UUID uuid) { return accounts.containsKey(uuid); }
-    boolean isAuthenticated(UUID uuid) { return plugin.getAuthenticated().contains(uuid); }
+    boolean isRegistered(UUID uuid) {
+        return accounts.containsKey(uuid);
+    }
+
+    boolean isAuthenticated(UUID uuid) {
+        return plugin.getAuthenticated().contains(uuid);
+    }
 
     void register(Player player, String password, Consumer<String> result) {
         UUID uuid = player.getUniqueId();
-        if (isRegistered(uuid)) {
+        if (isRegistered(uuid) || !registrationsInProgress.add(uuid)) {
             result.accept("already-registered");
             return;
         }
+
         hashAsync(password, hash -> plugin.getServer().getScheduler().runTask(plugin, () -> {
+            registrationsInProgress.remove(uuid);
             String[] parts = hash.split("\\$", 2);
             Account account = new Account(parts[1], parts[0], null, false);
             accounts.put(uuid, account);
-            write(uuid, account);
-            plugin.getAuthenticated().add(uuid);
-            result.accept("ok");
+            try {
+                write(uuid, account);
+                plugin.getAuthenticated().add(uuid);
+                result.accept("ok");
+            } catch (IllegalStateException e) {
+                accounts.remove(uuid);
+                result.accept("storage-failed");
+            }
         }));
     }
 
@@ -101,6 +117,7 @@ final class AuthManager {
             result.accept("not-registered");
             return;
         }
+
         verifyPasswordAsync(password, account.salt, account.password, valid ->
                 plugin.getServer().getScheduler().runTask(plugin, () -> {
                     if (!valid) {
@@ -118,7 +135,9 @@ final class AuthManager {
 
     String beginTotp(Player player) {
         Account account = accounts.get(player.getUniqueId());
-        if (account == null || !isAuthenticated(player.getUniqueId()) || account.totpEnabled) return null;
+        if (account == null || !isAuthenticated(player.getUniqueId()) || account.totpEnabled) {
+            return null;
+        }
         account.totp = randomBase32(20);
         write(player.getUniqueId(), account);
         return account.totp;
@@ -126,19 +145,29 @@ final class AuthManager {
 
     boolean confirmTotp(Player player, String code) {
         Account account = accounts.get(player.getUniqueId());
-        if (account == null || account.totp == null || !isAuthenticated(player.getUniqueId())) return false;
-        if (!verifyTotp(account.totp, code)) return false;
+        if (account == null || account.totp == null || account.totpEnabled || !isAuthenticated(player.getUniqueId())) {
+            return false;
+        }
+        if (!verifyTotp(account.totp, code)) {
+            return false;
+        }
         account.totpEnabled = true;
         write(player.getUniqueId(), account);
         return true;
     }
 
     boolean disableTotp(Player player, String code) {
-        Account account = accounts.get(player.getUniqueId());
-        if (account == null || !account.totpEnabled || !verifyTotp(account.totp, code)) return false;
+        UUID uuid = player.getUniqueId();
+        Account account = accounts.get(uuid);
+        if (account == null || !account.totpEnabled || !isAuthenticated(uuid)) {
+            return false;
+        }
+        if (!verifyTotp(account.totp, code)) {
+            return false;
+        }
         account.totp = null;
         account.totpEnabled = false;
-        write(player.getUniqueId(), account);
+        write(uuid, account);
         return true;
     }
 
@@ -152,10 +181,18 @@ final class AuthManager {
     }
 
     private void save() {
+        File temp = new File(file.getParentFile(), "accounts.yml.tmp");
         try {
-            data.save(file);
+            file.getParentFile().mkdirs();
+            data.save(temp);
+            Files.move(temp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException e) {
-            plugin.getLogger().severe("Could not save accounts.yml: " + e.getMessage());
+            try {
+                Files.deleteIfExists(temp.toPath());
+            } catch (IOException cleanup) {
+                e.addSuppressed(cleanup);
+            }
+            throw new IllegalStateException("Could not save accounts.yml", e);
         }
     }
 
