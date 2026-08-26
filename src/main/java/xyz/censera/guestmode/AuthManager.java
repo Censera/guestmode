@@ -36,6 +36,7 @@ final class AuthManager {
     private final YamlConfiguration data;
     private final Map<UUID, Account> accounts = new HashMap<>();
     private final Set<UUID> registrationsInProgress = new HashSet<>();
+    private final Map<UUID, String> pendingTotp = new HashMap<>();
     private final Map<UUID, FailureState> failures = new HashMap<>();
 
     AuthManager(GuestMode plugin) {
@@ -94,16 +95,24 @@ final class AuthManager {
 
         hashAsync(password, hash -> plugin.getServer().getScheduler().runTask(plugin, () -> {
             registrationsInProgress.remove(uuid);
+            if (hash == null) {
+                result.accept("hash-failed");
+                return;
+            }
+            if (isRegistered(uuid)) {
+                result.accept("already-registered");
+                return;
+            }
+
             String[] parts = hash.split("\\$", 2);
             Account account = new Account(parts[1], parts[0], null, false);
-            accounts.put(uuid, account);
             try {
                 write(uuid, account);
+                accounts.put(uuid, account);
                 plugin.getAuthenticated().add(uuid);
                 failures.remove(uuid);
                 result.accept("ok");
             } catch (IllegalStateException e) {
-                accounts.remove(uuid);
                 result.accept("storage-failed");
             }
         }));
@@ -142,20 +151,36 @@ final class AuthManager {
     }
 
     String beginTotp(Player player) {
-        Account account = accounts.get(player.getUniqueId());
-        if (account == null || !isAuthenticated(player.getUniqueId()) || account.totpEnabled) return null;
-        account.totp = randomBase32(20);
-        write(player.getUniqueId(), account);
-        return account.totp;
+        UUID uuid = player.getUniqueId();
+        Account account = accounts.get(uuid);
+        if (account == null || !isAuthenticated(uuid) || account.totpEnabled) {
+            return null;
+        }
+        String secret = randomBase32(20);
+        pendingTotp.put(uuid, secret);
+        return secret;
     }
 
     boolean confirmTotp(Player player, String code) {
-        Account account = accounts.get(player.getUniqueId());
-        if (account == null || account.totp == null || account.totpEnabled || !isAuthenticated(player.getUniqueId())) return false;
-        if (!verifyTotp(account.totp, code)) return false;
+        UUID uuid = player.getUniqueId();
+        Account account = accounts.get(uuid);
+        String secret = pendingTotp.get(uuid);
+        if (account == null || secret == null || account.totpEnabled || !isAuthenticated(uuid)) {
+            return false;
+        }
+        if (!verifyTotp(secret, code)) {
+            return false;
+        }
+
+        account.totp = secret;
         account.totpEnabled = true;
-        write(player.getUniqueId(), account);
+        write(uuid, account);
+        pendingTotp.remove(uuid);
         return true;
+    }
+
+    void cancelTotp(UUID uuid) {
+        pendingTotp.remove(uuid);
     }
 
     boolean disableTotp(Player player, String code) {
@@ -222,7 +247,7 @@ final class AuthManager {
                 callback.accept(Base64.getEncoder().encodeToString(salt) + "$"
                         + Base64.getEncoder().encodeToString(hash));
             } catch (GeneralSecurityException e) {
-                throw new IllegalStateException("Password hashing failed", e);
+                callback.accept(null);
             }
         });
     }
