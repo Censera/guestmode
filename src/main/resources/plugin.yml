@@ -1,18 +1,18 @@
-name: GuestMode
+name: Eyes
 version: "${project.version}"
 main: xyz.censera.guestmode.GuestMode
 api-version: "26.1"
-description: Guest mode and lightweight authentication for offline-mode Paper servers.
+description: Authentication, trust, and world protection for offline-mode Paper servers.
 authors: [Censera]
 softdepend: [floodgate, FastLogin, Geyser-Spigot, ViaVersion, ViaBackwards]
 
 commands:
-  guestmode:
-    description: GuestMode management commands.
-    usage: /guestmode <reload|list|kick-guests>
-    permission: guestmode.admin
+  eyes:
+    description: Eyes administration commands.
+    usage: /eyes <reload|list|kick-guests>
+    permission: eyes.admin
   guest:
-    description: Guest Mode utility commands.
+    description: Guest utility commands.
     usage: /guest <unstuck|nudge>
   register:
     description: Register your offline-mode account.
@@ -25,9 +25,9 @@ commands:
     usage: /2fa <enable|confirm|disable> [code]
 
 permissions:
-  guestmode.admin:
-    description: Access to all /guestmode administration commands.
+  eyes.admin:
+    description: Access to all /eyes administration commands.
     default: op
-  guestmode.bypass:
-    description: Skip Guest Mode and authentication.
+  eyes.bypass:
+    description: Skip Eyes authentication and guest restrictions.
     default: op
