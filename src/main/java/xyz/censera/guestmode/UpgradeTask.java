@@ -45,7 +45,7 @@ final class UpgradeTask {
                 continue;
             }
 
-            if (player.isWhitelisted()) {
+            if (player.isWhitelisted() && plugin.getAuthenticated().contains(uuid)) {
                 upgrade(player, config);
             }
         }
@@ -63,6 +63,6 @@ final class UpgradeTask {
         }
 
         plugin.getLogger().info(player.getName()
-                + " whitelisted while online; upgraded from Guest Mode.");
+                + " is trusted and authenticated; upgraded from Guest Mode.");
     }
 }
