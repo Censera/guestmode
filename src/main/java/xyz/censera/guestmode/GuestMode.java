@@ -1,6 +1,5 @@
 package xyz.censera.guestmode;
 
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -41,14 +40,14 @@ public final class GuestMode extends JavaPlugin {
         adminCommand.setTabCompleter(executor);
 
         AuthCommand authCommand = new AuthCommand(this);
-        getCommand("register").setExecutor(authCommand);
-        getCommand("login").setExecutor(authCommand);
-        getCommand("2fa").setExecutor(authCommand);
+        requireCommand("register").setExecutor(authCommand);
+        requireCommand("login").setExecutor(authCommand);
+        requireCommand("2fa").setExecutor(authCommand);
 
         GuestCommand guestCommand = new GuestCommand(this);
-        getCommand("guest").setExecutor(guestCommand);
+        requireCommand("guest").setExecutor(guestCommand);
 
-        getLogger().info("Eyes enabled on Paper 26.2.");
+        getLogger().info("Eyes enabled.");
     }
 
     @Override
@@ -67,7 +66,7 @@ public final class GuestMode extends JavaPlugin {
 
     void enterGuest(Player player) {
         UUID uuid = player.getUniqueId();
-        if (registry.snapshot().contains(uuid)) {
+        if (registry.contains(uuid)) {
             return;
         }
 
@@ -96,6 +95,7 @@ public final class GuestMode extends JavaPlugin {
             Method method = apiClass.getMethod("isFloodgatePlayer", UUID.class);
             return Boolean.TRUE.equals(method.invoke(api, uuid));
         } catch (ReflectiveOperationException | RuntimeException e) {
+            getLogger().fine("Floodgate integration unavailable; using normal authentication fallback.");
             return false;
         }
     }
@@ -128,6 +128,14 @@ public final class GuestMode extends JavaPlugin {
         reloadConfig();
         pluginConfig = new PluginConfig(this);
         getLogger().info("Configuration reloaded.");
+    }
+
+    private org.bukkit.command.PluginCommand requireCommand(String name) {
+        org.bukkit.command.PluginCommand command = getCommand(name);
+        if (command == null) {
+            throw new IllegalStateException("Required command '" + name + "' is missing from plugin.yml");
+        }
+        return command;
     }
 
     GuestRegistry getRegistry() { return registry; }
