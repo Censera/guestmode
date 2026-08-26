@@ -80,9 +80,7 @@ public final class GuestMode extends JavaPlugin {
 
     void enterGuest(Player player) {
         UUID uuid = player.getUniqueId();
-        if (registry.contains(uuid)) {
-            return;
-        }
+        if (registry.contains(uuid)) return;
 
         registry.add(uuid);
         player.setGameMode(pluginConfig.getGuestGameMode());
@@ -110,9 +108,7 @@ public final class GuestMode extends JavaPlugin {
 
     void moveGuestToSafeLocation(Player player) {
         Location target = player.getBedSpawnLocation();
-        if (!isValidGuestLocation(target)) {
-            target = safeSpawn(guestWorld);
-        }
+        if (!isValidGuestLocation(target)) target = safeSpawn(guestWorld);
 
         if (target == null) {
             throw new IllegalStateException("No safe guest location is available for " + player.getName());
@@ -123,25 +119,19 @@ public final class GuestMode extends JavaPlugin {
 
     private Location safeSpawn(World world) {
         Location spawn = world.getSpawnLocation();
-        if (isValidGuestLocation(spawn)) {
-            return spawn;
-        }
+        if (isValidGuestLocation(spawn)) return spawn;
 
         int baseX = spawn.getBlockX();
         int baseZ = spawn.getBlockZ();
         for (int radius = 1; radius <= 16; radius++) {
             for (int x = -radius; x <= radius; x++) {
                 for (int z = -radius; z <= radius; z++) {
-                    if (Math.max(Math.abs(x), Math.abs(z)) != radius) {
-                        continue;
-                    }
+                    if (Math.max(Math.abs(x), Math.abs(z)) != radius) continue;
                     int blockX = baseX + x;
                     int blockZ = baseZ + z;
                     int y = world.getHighestBlockYAt(blockX, blockZ) + 1;
                     Location candidate = new Location(world, blockX + 0.5, y, blockZ + 0.5);
-                    if (isValidGuestLocation(candidate)) {
-                        return candidate;
-                    }
+                    if (isValidGuestLocation(candidate)) return candidate;
                 }
             }
         }
@@ -157,10 +147,8 @@ public final class GuestMode extends JavaPlugin {
                 && location.clone().add(0, 1, 0).getBlock().isPassable();
     }
 
-    private boolean isWithinGuestBoundary(Location location) {
-        if (location == null || location.getWorld() != guestWorld) {
-            return false;
-        }
+    boolean isWithinGuestBoundary(Location location) {
+        if (location == null || location.getWorld() != guestWorld) return false;
         Location spawn = guestWorld.getSpawnLocation();
         double dx = location.getX() - spawn.getX();
         double dz = location.getZ() - spawn.getZ();
@@ -169,15 +157,11 @@ public final class GuestMode extends JavaPlugin {
 
     private void startDimensionGrace(Player player) {
         UUID uuid = player.getUniqueId();
-        if (dimensionGrace.containsKey(uuid)) {
-            return;
-        }
+        if (dimensionGrace.containsKey(uuid)) return;
 
         BukkitTask task = getServer().getScheduler().runTaskLater(this, () -> {
             dimensionGrace.remove(uuid);
-            if (!player.isOnline() || !registry.contains(uuid) || player.getWorld() == guestWorld) {
-                return;
-            }
+            if (!player.isOnline() || !registry.contains(uuid) || player.getWorld() == guestWorld) return;
             moveGuestToSafeLocation(player);
         }, DIMENSION_GRACE_TICKS);
         dimensionGrace.put(uuid, task);
@@ -185,9 +169,7 @@ public final class GuestMode extends JavaPlugin {
 
     private void cancelDimensionGrace(UUID uuid) {
         BukkitTask task = dimensionGrace.remove(uuid);
-        if (task != null) {
-            task.cancel();
-        }
+        if (task != null) task.cancel();
     }
 
     private boolean isDangerous(Location location) {
@@ -213,9 +195,7 @@ public final class GuestMode extends JavaPlugin {
     }
 
     boolean isFloodgatePlayer(UUID uuid) {
-        if (getServer().getPluginManager().getPlugin("floodgate") == null) {
-            return false;
-        }
+        if (getServer().getPluginManager().getPlugin("floodgate") == null) return false;
         try {
             Class<?> apiClass = Class.forName("org.geysermc.floodgate.api.FloodgateApi");
             Object api = apiClass.getMethod("getInstance").invoke(null);
@@ -228,15 +208,11 @@ public final class GuestMode extends JavaPlugin {
     }
 
     boolean isPremiumPlayer(UUID uuid) {
-        if (getServer().getPluginManager().getPlugin("FastLogin") == null) {
-            return false;
-        }
+        if (getServer().getPluginManager().getPlugin("FastLogin") == null) return false;
         try {
             Class<?> pluginClass = Class.forName("com.github.games647.fastlogin.bukkit.FastLoginBukkit");
             Object plugin = getServer().getPluginManager().getPlugin("FastLogin");
-            if (plugin == null || !pluginClass.isInstance(plugin)) {
-                return false;
-            }
+            if (plugin == null || !pluginClass.isInstance(plugin)) return false;
             Method getStatus = pluginClass.getMethod("getStatus", UUID.class);
             Object status = getStatus.invoke(plugin, uuid);
             return status != null && "PREMIUM".equals(status.toString());
@@ -259,9 +235,7 @@ public final class GuestMode extends JavaPlugin {
 
     private org.bukkit.command.PluginCommand requireCommand(String name) {
         org.bukkit.command.PluginCommand command = getCommand(name);
-        if (command == null) {
-            throw new IllegalStateException("Required command '" + name + "' is missing from plugin.yml");
-        }
+        if (command == null) throw new IllegalStateException("Required command '" + name + "' is missing from plugin.yml");
         return command;
     }
 
