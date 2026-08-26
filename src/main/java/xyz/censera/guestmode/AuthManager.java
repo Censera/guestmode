@@ -10,6 +10,8 @@ import javax.crypto.spec.SecretKeySpec;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
@@ -33,8 +35,28 @@ final class AuthManager {
     AuthManager(GuestMode plugin) {
         this.plugin = plugin;
         file = new File(plugin.getDataFolder(), "accounts.yml");
+        migrateLegacyAccounts();
         data = YamlConfiguration.loadConfiguration(file);
         load();
+    }
+
+    private void migrateLegacyAccounts() {
+        if (file.exists()) {
+            return;
+        }
+
+        File oldFile = new File(plugin.getDataFolder().getParentFile(), "GuestMode/accounts.yml");
+        if (!oldFile.isFile()) {
+            return;
+        }
+
+        try {
+            plugin.getDataFolder().mkdirs();
+            Files.copy(oldFile.toPath(), file.toPath(), StandardCopyOption.COPY_ATTRIBUTES);
+            plugin.getLogger().info("Migrated accounts.yml from the previous GuestMode data folder.");
+        } catch (IOException e) {
+            plugin.getLogger().severe("Could not migrate GuestMode accounts.yml: " + e.getMessage());
+        }
     }
 
     private void load() {
@@ -240,8 +262,8 @@ final class AuthManager {
     }
 
     String totpUri(Player player, String secret) {
-        return "otpauth://totp/GuestMode:" + player.getName()
-                + "?secret=" + secret + "&issuer=GuestMode&algorithm=SHA1&digits=6&period=30";
+        return "otpauth://totp/Eyes:" + player.getName()
+                + "?secret=" + secret + "&issuer=Eyes&algorithm=SHA1&digits=6&period=30";
     }
 
     private static final class Account {
