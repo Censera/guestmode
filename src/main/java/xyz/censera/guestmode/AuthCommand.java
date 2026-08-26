@@ -47,7 +47,8 @@ final class AuthCommand implements CommandExecutor {
         plugin.getAuth().register(player, args[0], result -> {
             switch (result) {
                 case "ok" -> player.sendMessage(ChatColor.GREEN + "Registered and logged in.");
-                case "already-registered" -> player.sendMessage(ChatColor.RED + "You are already registered. Enjoy <3");
+                case "already-registered" -> player.sendMessage(ChatColor.RED + "You are already registered.");
+                case "rate-limited" -> player.sendMessage(ChatColor.RED + "Please wait before trying again.");
                 default -> player.sendMessage(ChatColor.RED + "Registration failed.");
             }
         });
@@ -60,8 +61,12 @@ final class AuthCommand implements CommandExecutor {
             return true;
         }
         plugin.getAuth().login(player, args[0], args.length == 2 ? args[1] : null, result -> {
+            if (result.startsWith("rate-limited:")) {
+                player.sendMessage(ChatColor.RED + "Please wait " + result.substring("rate-limited:".length()) + " seconds before trying again.");
+                return;
+            }
             switch (result) {
-                case "ok" -> player.sendMessage(ChatColor.GREEN + "Logged in. Enjoy <3");
+                case "ok" -> player.sendMessage(ChatColor.GREEN + "Logged in.");
                 case "not-registered" -> player.sendMessage(ChatColor.RED + "You are not registered. Use /register <password>.");
                 case "2fa-required" -> player.sendMessage(ChatColor.RED + "Your account requires a 2FA code.");
                 case "invalid-2fa" -> player.sendMessage(ChatColor.RED + "Invalid 2FA code.");
@@ -79,7 +84,7 @@ final class AuthCommand implements CommandExecutor {
         if (args.length == 1 && args[0].equalsIgnoreCase("enable")) {
             String secret = plugin.getAuth().beginTotp(player);
             if (secret == null) {
-                player.sendMessage(ChatColor.RED + "2FA is already enabled.");
+                player.sendMessage(ChatColor.RED + "2FA is already enabled or setup is already in progress.");
                 return true;
             }
 
@@ -87,8 +92,9 @@ final class AuthCommand implements CommandExecutor {
             try {
                 url = plugin.startTwoFactorSetup(player, secret);
             } catch (IOException e) {
+                plugin.getAuth().cancelTotp(player.getUniqueId());
                 player.sendMessage(ChatColor.RED + "Could not start the 2FA setup page.");
-                plugin.getLogger().warning("Could not start 2FA setup page: " + e.getMessage());
+                plugin.getLogger().warning("Could not start 2FA setup page for " + player.getUniqueId() + ": " + e.getMessage());
                 return true;
             }
 
