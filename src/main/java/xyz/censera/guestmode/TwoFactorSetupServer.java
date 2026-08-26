@@ -8,6 +8,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
@@ -15,6 +16,7 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
@@ -23,6 +25,7 @@ final class TwoFactorSetupServer {
     private static final int QR_SIZE = 57;
     private final GuestMode plugin;
     private HttpServer server;
+    private ExecutorService executor;
     private Setup setup;
     private long expiryMs;
 
@@ -36,13 +39,18 @@ final class TwoFactorSetupServer {
         String host = plugin.getPluginConfig().getTwoFactorWebHost();
         int configuredPort = plugin.getPluginConfig().getTwoFactorWebPort();
         expiryMs = TimeUnit.SECONDS.toMillis(plugin.getPluginConfig().getTwoFactorWebExpirySeconds());
+        InetAddress address = InetAddress.getByName(host);
+        if (!address.isLoopbackAddress()) {
+            throw new IOException("2FA setup server must bind to a loopback address because it uses HTTP");
+        }
         if (configuredPort < 0 || configuredPort > 65535 || expiryMs <= 0) {
             throw new IOException("Invalid 2FA web configuration");
         }
 
-        server = HttpServer.create(new InetSocketAddress(host, configuredPort), 0);
+        server = HttpServer.create(new InetSocketAddress(address, configuredPort), 0);
         setup = new Setup(playerSetup.uuid(), playerSetup.name(), playerSetup.secret(), playerSetup.uri(), token());
-        server.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
+        executor = Executors.newVirtualThreadPerTaskExecutor();
+        server.setExecutor(executor);
         server.createContext("/2fa", this::handle);
         server.start();
 
@@ -50,10 +58,20 @@ final class TwoFactorSetupServer {
         return "http://" + formatHost(host) + ":" + server.getAddress().getPort() + "/2fa/" + setup.token;
     }
 
+    synchronized void stopFor(UUID uuid) {
+        if (setup != null && setup.uuid.equals(uuid)) {
+            stop();
+        }
+    }
+
     synchronized void stop() {
         if (server != null) {
             server.stop(0);
             server = null;
+        }
+        if (executor != null) {
+            executor.shutdownNow();
+            executor = null;
         }
         setup = null;
     }
@@ -94,9 +112,9 @@ final class TwoFactorSetupServer {
         String qr = qrSvg(setup.uri);
         String name = escape(setup.name);
         String secret = escape(setup.secret);
-        return "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>GuestMode 2FA</title>"
+        return "<!doctype html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Eyes 2FA</title>"
                 + "<style>body{font-family:system-ui,sans-serif;max-width:520px;margin:40px auto;padding:24px;color:#222}svg{display:block;width:340px;height:340px;margin:24px auto;background:#fff}code{user-select:all;word-break:break-all}button{padding:10px 14px;cursor:pointer}</style></head><body>"
-                + "<h1>GuestMode 2FA</h1><p>Account: <strong>" + name + "</strong></p>"
+                + "<h1>Eyes 2FA</h1><p>Account: <strong>" + name + "</strong></p>"
                 + "<p>Scan this QR code with your authenticator app.</p>" + qr
                 + "<p>Setup key:</p><p><code id=\"secret\">" + secret + "</code></p>"
                 + "<button onclick=\"navigator.clipboard.writeText(document.getElementById('secret').textContent)\">Copy setup key</button>"
