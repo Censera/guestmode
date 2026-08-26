@@ -2,6 +2,7 @@ package xyz.censera.guestmode;
 
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -15,6 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class GuestMode extends JavaPlugin {
     private static final long DIMENSION_GRACE_TICKS = 120L * 20L;
+    private static final double MAX_DISTANCE_SQUARED = 200.0 * 200.0;
 
     private GuestRegistry registry;
     private PluginConfig pluginConfig;
@@ -110,23 +112,53 @@ public final class GuestMode extends JavaPlugin {
     }
 
     void moveGuestToSafeLocation(Player player) {
-        if (isNormalWorld(player.getWorld()) && isSafe(player)) {
-            return;
+        Location target = player.getBedSpawnLocation();
+        if (!isValidGuestLocation(target)) {
+            World world = firstNormalWorld();
+            target = world == null ? null : safeSpawn(world);
         }
 
-        org.bukkit.Location target = player.getBedSpawnLocation();
-        if (target == null || !isNormalWorld(target.getWorld()) || !isSafe(target)) {
-            target = player.getWorld().getSpawnLocation();
-        }
-        if (!isNormalWorld(target.getWorld()) || !isSafe(target)) {
-            target = Bukkit.getWorlds().stream()
-                    .filter(this::isNormalWorld)
-                    .findFirst()
-                    .map(World::getSpawnLocation)
-                    .orElseThrow(() -> new IllegalStateException("No normal world is available for safe guest relocation"));
+        if (target == null) {
+            throw new IllegalStateException("No safe guest location is available for " + player.getName());
         }
 
         player.teleport(target);
+    }
+
+    private Location safeSpawn(World world) {
+        Location spawn = world.getSpawnLocation();
+        if (isValidGuestLocation(spawn)) {
+            return spawn;
+        }
+
+        int baseX = spawn.getBlockX();
+        int baseZ = spawn.getBlockZ();
+        for (int radius = 1; radius <= 16; radius++) {
+            for (int x = -radius; x <= radius; x++) {
+                for (int z = -radius; z <= radius; z++) {
+                    if (Math.max(Math.abs(x), Math.abs(z)) != radius) {
+                        continue;
+                    }
+                    int blockX = baseX + x;
+                    int blockZ = baseZ + z;
+                    int y = world.getHighestBlockYAt(blockX, blockZ) + 1;
+                    Location candidate = new Location(world, blockX + 0.5, y, blockZ + 0.5);
+                    if (isValidGuestLocation(candidate)) {
+                        return candidate;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private boolean isValidGuestLocation(Location location) {
+        if (location == null || !isNormalWorld(location.getWorld()) || !withinGuestBoundary(location)) {
+            return false;
+        }
+        return !isDangerous(location)
+                && location.getBlock().isPassable()
+                && location.clone().add(0, 1, 0).getBlock().isPassable();
     }
 
     private void startDimensionGrace(Player player) {
@@ -156,21 +188,33 @@ public final class GuestMode extends JavaPlugin {
         return world != null && world.getEnvironment() == World.Environment.NORMAL;
     }
 
-    private boolean isSafe(Player player) {
-        return !isDangerous(player.getLocation());
+    private boolean withinGuestBoundary(Location location) {
+        World world = location.getWorld();
+        if (!isNormalWorld(world)) {
+            return false;
+        }
+        Location spawn = world.getSpawnLocation();
+        double dx = location.getX() - spawn.getX();
+        double dz = location.getZ() - spawn.getZ();
+        return dx * dx + dz * dz <= MAX_DISTANCE_SQUARED;
     }
 
-    private boolean isSafe(org.bukkit.Location location) {
-        return !isDangerous(location);
-    }
-
-    private boolean isDangerous(org.bukkit.Location location) {
+    private boolean isDangerous(Location location) {
+        String type = location.getBlock().getType().toString();
+        String above = location.clone().add(0, 1, 0).getBlock().getType().toString();
         return location.getBlock().isLiquid()
-                || location.getBlock().getType().toString().contains("FIRE")
-                || location.getBlock().getType().toString().contains("MAGMA")
-                || location.getBlock().getType().toString().contains("CAMPFIRE")
-                || location.clone().add(0, 1, 0).getBlock().getType().toString().contains("FIRE")
+                || type.contains("FIRE")
+                || type.contains("MAGMA")
+                || type.contains("CAMPFIRE")
+                || above.contains("FIRE")
                 || location.getY() < location.getWorld().getMinHeight() + 1;
+    }
+
+    private World firstNormalWorld() {
+        return Bukkit.getWorlds().stream()
+                .filter(this::isNormalWorld)
+                .findFirst()
+                .orElse(null);
     }
 
     boolean isFloodgatePlayer(UUID uuid) {
