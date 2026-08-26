@@ -1,23 +1,47 @@
-# GuestMode
+# Eyes
 
-A small Paper plugin for offline-mode servers. Unwhitelisted players enter Adventure mode, while registered players use password authentication.
+Eyes is a Paper plugin for offline-mode servers that combines account authentication with world protection.
 
-Targets Paper 26.2 and Java 25.
+Authentication answers **who are you?** World protection answers **what are you trusted to do?** They are separate checks that work together.
 
-Authentication is deliberately local:
+A public server can accept strangers without giving them access to the real world. New and untrusted players enter Guest Mode and remain there until they are both authenticated and trusted through the server whitelist.
+
+## Authentication
+
+Cracked/offline-mode players use:
 
 - `/register <password>`
 - `/login <password> [2fa-code]`
 - `/2fa enable`
 - `/2fa confirm <code>`
 - `/2fa disable <code>`
-- Passwords use salted PBKDF2-HMAC-SHA256.
-- 2FA uses standard TOTP.
-- Accounts are stored in `plugins/GuestMode/accounts.yml`.
 
-Bedrock players detected by Floodgate skip authentication. Premium Java auto-login is supported through the optional FastLogin integration. FastLogin performs the actual Mojang session verification; GuestMode only consumes its verified premium status. This is necessary on an offline-mode server because a Paper plugin cannot prove that an arbitrary offline-mode client owns a premium Minecraft account by checking its username alone.
+Passwords use salted PBKDF2-HMAC-SHA256. 2FA uses standard TOTP. Accounts are stored in `plugins/Eyes/accounts.yml` and keyed by UUID, so changing a username does not change the account identity.
 
-Geyser/Floodgate, ViaVersion, and ViaBackwards are treated as server-side compatibility layers. GuestMode does not hook their packet internals, so protocol translation does not become a maintenance dependency.
+Premium Java players can authenticate automatically through the optional FastLogin integration. Floodgate players are authenticated through Floodgate. These integrations provide identity proof; they do not grant world trust by themselves.
+
+## Guest Mode
+
+Untrusted players are kept in Guest Mode until they are authenticated and whitelisted.
+
+Guests:
+
+- Cannot use normal commands before authentication.
+- Cannot damage entities or be damaged by entities.
+- Cannot interact with the world normally.
+- Cannot leave a 200-block horizontal radius around the world spawn.
+- Cannot enter the Nether or End.
+- Cannot use cross-world teleports.
+
+Players who refuse to register or log in remain guests. Players who are authenticated but not whitelisted also remain guests.
+
+Whitelisting is a **trust decision**, not an authentication bypass. A whitelisted cracked player still has to log in to their account.
+
+## Integrations
+
+Geyser/Floodgate, ViaVersion, and ViaBackwards are treated as server-side compatibility layers. Eyes does not hook their packet internals.
+
+FastLogin is optional. Eyes accepts only its verified `PREMIUM` status as proof of premium authentication.
 
 ## Build
 
@@ -27,17 +51,7 @@ Requires Java 25 and Maven 3.8+.
 mvn package -DskipTests
 ```
 
-The resulting `GuestMode-2.0.0.jar` goes in `plugins/`.
-
-## Guest mode
-
-Unwhitelisted players join in the configured guest game mode. If an administrator adds them to the whitelist while they are online, GuestMode detects it once per second and upgrades them.
-
-## Compatibility
-
-Paper 26.2 is the target. Geyser/Floodgate, ViaVersion, and ViaBackwards require no direct packet hooks from this plugin. Floodgate is an optional runtime dependency and is detected automatically.
-
-FastLogin is optional. When installed, GuestMode accepts only its `PREMIUM` status as proof of premium authentication.
+The resulting `Eyes-3.5.2.jar` goes in `plugins/`.
 
 ## License
 
