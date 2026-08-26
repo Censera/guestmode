@@ -25,7 +25,7 @@ final class GuestModeCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!sender.hasPermission("guestmode.admin")) {
+        if (!sender.hasPermission("eyes.admin")) {
             sender.sendMessage(ChatColor.RED + "You don't have permission to use this command.");
             return true;
         }
@@ -46,8 +46,8 @@ final class GuestModeCommand implements CommandExecutor, TabCompleter {
 
     private void handleReload(CommandSender sender) {
         plugin.reload();
-        sender.sendMessage(ChatColor.GREEN + "GuestMode config reloaded.");
-        plugin.getLogger().info(sender.getName() + " reloaded GuestMode config.");
+        sender.sendMessage(ChatColor.GREEN + "Eyes config reloaded.");
+        plugin.getLogger().info(sender.getName() + " reloaded Eyes config.");
     }
 
     private void handleList(CommandSender sender) {
@@ -92,7 +92,7 @@ final class GuestModeCommand implements CommandExecutor, TabCompleter {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (!sender.hasPermission("guestmode.admin") || args.length != 1) {
+        if (!sender.hasPermission("eyes.admin") || args.length != 1) {
             return List.of();
         }
 
@@ -107,11 +107,11 @@ final class GuestModeCommand implements CommandExecutor, TabCompleter {
     }
 
     private void sendUsage(CommandSender sender) {
-        sender.sendMessage(ChatColor.GOLD + "GuestMode admin commands:");
-        sender.sendMessage(ChatColor.YELLOW + "  /guestmode reload" + ChatColor.GRAY + " - reload configuration");
-        sender.sendMessage(ChatColor.YELLOW + "  /guestmode list" + ChatColor.GRAY + " - list online guests");
-        sender.sendMessage(ChatColor.YELLOW + "  /guestmode kick-guests" + ChatColor.GRAY + " - kick all online guests");
-        sender.sendMessage(ChatColor.GOLD + "Guest commands:");
+        sender.sendMessage(ChatColor.GOLD + "Eyes administration:");
+        sender.sendMessage(ChatColor.YELLOW + "  /eyes reload" + ChatColor.GRAY + " - reload configuration");
+        sender.sendMessage(ChatColor.YELLOW + "  /eyes list" + ChatColor.GRAY + " - list online guests");
+        sender.sendMessage(ChatColor.YELLOW + "  /eyes kick-guests" + ChatColor.GRAY + " - kick all online guests");
+        sender.sendMessage(ChatColor.GOLD + "Guest utilities:");
         sender.sendMessage(ChatColor.YELLOW + "  /guest unstuck" + ChatColor.GRAY + " - teleport to bed spawn or world spawn");
         sender.sendMessage(ChatColor.YELLOW + "  /guest nudge" + ChatColor.GRAY + " - teleport 10 blocks upward (30s cooldown)");
         sender.sendMessage(ChatColor.GOLD + "Authentication:");
