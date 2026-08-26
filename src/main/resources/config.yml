@@ -7,8 +7,6 @@ upgrade-message: "&aYou are authenticated and trusted. Full world access granted
 broadcast-on-upgrade: ""
 guest-gamemode: SPECTATOR
 upgrade-gamemode: SURVIVAL
-kick-if-whitelist-enabled: false
-kick-message: "&cThis server is whitelisted. Contact an admin to be added."
 
 two-factor-web-host: "127.0.0.1"
 two-factor-web-port: 0
