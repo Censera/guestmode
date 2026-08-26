@@ -51,7 +51,7 @@ Requires Java 25 and Maven 3.8+.
 mvn package -DskipTests
 ```
 
-The resulting `Eyes-4.0.0.jar` goes in `plugins/`.
+The resulting `Eyes-4.0.1.jar` goes in `plugins/`.
 
 ## License
 
