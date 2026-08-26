@@ -22,6 +22,9 @@ final class PlayerListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onQuit(org.bukkit.event.player.PlayerQuitEvent event) {
-        plugin.getRegistry().remove(event.getPlayer().getUniqueId());
+        Player player = event.getPlayer();
+        plugin.getAuthenticated().remove(player.getUniqueId());
+        plugin.getAuth().cancelTotp(player.getUniqueId());
+        plugin.getRegistry().remove(player.getUniqueId());
     }
 }
