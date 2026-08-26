@@ -16,7 +16,7 @@ Cracked/offline-mode players use:
 - `/2fa confirm <code>`
 - `/2fa disable <code>`
 
-Passwords use salted PBKDF2-HMAC-SHA256. 2FA uses standard TOTP. Accounts are stored in `plugins/Eyes/accounts.yml` and keyed by UUID, so changing a username does not change the account identity.
+Passwords use salted PBKDF2-HMAC-SHA256. 2FA uses standard TOTP. Accounts are stored in `plugins/Eyes/accounts.yml` and keyed by UUID.
 
 Premium Java players can authenticate automatically through the optional FastLogin integration. Floodgate players are authenticated through Floodgate. These integrations provide identity proof; they do not grant world trust by themselves.
 
@@ -29,7 +29,7 @@ Guests:
 - Cannot use normal commands before authentication.
 - Cannot damage entities or be damaged by entities.
 - Cannot interact with the world normally.
-- Cannot leave a 200-block horizontal radius around the world spawn.
+- Cannot leave a 200-block horizontal radius around the configured guest world spawn.
 - Cannot enter the Nether or End.
 - Cannot use cross-world teleports.
 
@@ -51,7 +51,7 @@ Requires Java 25 and Maven 3.8+.
 mvn package -DskipTests
 ```
 
-The resulting `Eyes-3.5.2.jar` goes in `plugins/`.
+The resulting `Eyes-4.0.0.jar` goes in `plugins/`.
 
 ## License
 
