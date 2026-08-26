@@ -2,18 +2,22 @@ package xyz.censera.guestmode;
 
 import org.bukkit.GameMode;
 import org.bukkit.Location;
-import org.bukkit.World;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerPortalEvent;
@@ -29,7 +33,7 @@ final class GuestProtectionListener implements Listener {
     }
 
     private boolean guest(Player player) {
-        return plugin.getRegistry().snapshot().contains(player.getUniqueId());
+        return plugin.getRegistry().contains(player.getUniqueId());
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
@@ -64,15 +68,42 @@ final class GuestProtectionListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onInteract(PlayerInteractEvent event) {
-        if (guest(event.getPlayer()) && event.getPlayer().getGameMode() != GameMode.SPECTATOR) {
+        if (guest(event.getPlayer())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onBreak(BlockBreakEvent event) {
+        if (guest(event.getPlayer())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onPlace(BlockPlaceEvent event) {
+        if (guest(event.getPlayer())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onDrop(PlayerDropItemEvent event) {
+        if (guest(event.getPlayer())) {
+            event.setCancelled(true);
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onPickup(EntityPickupItemEvent event) {
+        if (event.getEntity() instanceof Player player && guest(player)) {
             event.setCancelled(true);
         }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onInventoryOpen(InventoryOpenEvent event) {
-        if (event.getPlayer() instanceof Player player && guest(player)
-                && player.getGameMode() != GameMode.SPECTATOR) {
+        if (event.getPlayer() instanceof Player player && guest(player)) {
             event.setCancelled(true);
         }
     }
@@ -94,22 +125,13 @@ final class GuestProtectionListener implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onMove(PlayerMoveEvent event) {
         Player player = event.getPlayer();
-        if (!guest(player) || event.getTo() == null) {
-            return;
-        }
-
-        Location from = event.getFrom();
         Location to = event.getTo();
-        World world = from.getWorld();
-        if (world == null || to.getWorld() != world) {
-            event.setCancelled(true);
+        if (!guest(player) || to == null) {
             return;
         }
 
-        double dx = to.getX() - world.getSpawnLocation().getX();
-        double dz = to.getZ() - world.getSpawnLocation().getZ();
-        if (dx * dx + dz * dz > MAX_DISTANCE_SQUARED) {
-            event.setCancelled(true);
+        if (!withinGuestBoundary(to)) {
+            event.setTo(event.getFrom());
         }
     }
 
@@ -117,20 +139,30 @@ final class GuestProtectionListener implements Listener {
     public void onPortal(PlayerPortalEvent event) {
         if (guest(event.getPlayer())) {
             event.setCancelled(true);
-            event.getPlayer().sendMessage("§cGuests cannot enter another dimension.");
         }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onTeleport(PlayerTeleportEvent event) {
         Player player = event.getPlayer();
-        if (!guest(player) || event.getTo() == null) {
+        Location to = event.getTo();
+        if (!guest(player) || to == null) {
             return;
         }
 
-        Location to = event.getTo();
-        if (to.getWorld() != event.getFrom().getWorld()) {
+        if (!withinGuestBoundary(to)) {
             event.setCancelled(true);
         }
+    }
+
+    private boolean withinGuestBoundary(Location location) {
+        if (location.getWorld() == null || location.getWorld() != plugin.getGuestWorld()) {
+            return false;
+        }
+
+        Location spawn = location.getWorld().getSpawnLocation();
+        double dx = location.getX() - spawn.getX();
+        double dz = location.getZ() - spawn.getZ();
+        return dx * dx + dz * dz <= MAX_DISTANCE_SQUARED;
     }
 }
