@@ -23,6 +23,7 @@ public final class GuestMode extends JavaPlugin {
     private UpgradeTask upgradeTask;
     private AuthManager auth;
     private TwoFactorSetupServer twoFactorSetupServer;
+    private World guestWorld;
     private final Set<UUID> authenticated = ConcurrentHashMap.newKeySet();
     private final Map<UUID, BukkitTask> dimensionGrace = new ConcurrentHashMap<>();
 
@@ -30,6 +31,11 @@ public final class GuestMode extends JavaPlugin {
     public void onEnable() {
         saveDefaultConfig();
         pluginConfig = new PluginConfig(this);
+        guestWorld = firstNormalWorld();
+        if (guestWorld == null) {
+            throw new IllegalStateException("No normal world is available for Guest Mode");
+        }
+
         registry = new GuestRegistry();
         auth = new AuthManager(this);
         twoFactorSetupServer = new TwoFactorSetupServer(this);
@@ -53,7 +59,7 @@ public final class GuestMode extends JavaPlugin {
         GuestCommand guestCommand = new GuestCommand(this);
         requireCommand("guest").setExecutor(guestCommand);
 
-        getLogger().info("Eyes enabled.");
+        getLogger().info("Eyes enabled for " + guestWorld.getName() + ".");
     }
 
     @Override
@@ -85,37 +91,27 @@ public final class GuestMode extends JavaPlugin {
         player.sendMessage(ChatColor.translateAlternateColorCodes(
                 '&', pluginConfig.getGuestJoinMessage().replace("%player%", player.getName())));
 
-        if (isNormalWorld(player.getWorld())) {
-            cancelDimensionGrace(uuid);
-        } else {
+        if (player.getWorld() != guestWorld) {
             startDimensionGrace(player);
+        } else if (!isWithinGuestBoundary(player.getLocation())) {
+            moveGuestToSafeLocation(player);
         }
     }
 
     void exitGuest(Player player) {
         UUID uuid = player.getUniqueId();
         cancelDimensionGrace(uuid);
+        auth.cancelTotp(uuid);
+        twoFactorSetupServer.stopFor(uuid);
         registry.remove(uuid);
         player.setGameMode(pluginConfig.getUpgradeGameMode());
         player.sendMessage(ChatColor.translateAlternateColorCodes('&', pluginConfig.getUpgradeMessage()));
     }
 
-    void handleGuestWorldChange(Player player) {
-        if (!registry.contains(player.getUniqueId())) {
-            return;
-        }
-        if (isNormalWorld(player.getWorld())) {
-            cancelDimensionGrace(player.getUniqueId());
-        } else {
-            startDimensionGrace(player);
-        }
-    }
-
     void moveGuestToSafeLocation(Player player) {
         Location target = player.getBedSpawnLocation();
         if (!isValidGuestLocation(target)) {
-            World world = firstNormalWorld();
-            target = world == null ? null : safeSpawn(world);
+            target = safeSpawn(guestWorld);
         }
 
         if (target == null) {
@@ -153,12 +149,22 @@ public final class GuestMode extends JavaPlugin {
     }
 
     private boolean isValidGuestLocation(Location location) {
-        if (location == null || !isNormalWorld(location.getWorld()) || !withinGuestBoundary(location)) {
-            return false;
-        }
-        return !isDangerous(location)
+        return location != null
+                && location.getWorld() == guestWorld
+                && isWithinGuestBoundary(location)
+                && !isDangerous(location)
                 && location.getBlock().isPassable()
                 && location.clone().add(0, 1, 0).getBlock().isPassable();
+    }
+
+    private boolean isWithinGuestBoundary(Location location) {
+        if (location == null || location.getWorld() != guestWorld) {
+            return false;
+        }
+        Location spawn = guestWorld.getSpawnLocation();
+        double dx = location.getX() - spawn.getX();
+        double dz = location.getZ() - spawn.getZ();
+        return dx * dx + dz * dz <= MAX_DISTANCE_SQUARED;
     }
 
     private void startDimensionGrace(Player player) {
@@ -169,7 +175,7 @@ public final class GuestMode extends JavaPlugin {
 
         BukkitTask task = getServer().getScheduler().runTaskLater(this, () -> {
             dimensionGrace.remove(uuid);
-            if (!player.isOnline() || !registry.contains(uuid) || isNormalWorld(player.getWorld())) {
+            if (!player.isOnline() || !registry.contains(uuid) || player.getWorld() == guestWorld) {
                 return;
             }
             moveGuestToSafeLocation(player);
@@ -184,21 +190,6 @@ public final class GuestMode extends JavaPlugin {
         }
     }
 
-    private boolean isNormalWorld(World world) {
-        return world != null && world.getEnvironment() == World.Environment.NORMAL;
-    }
-
-    private boolean withinGuestBoundary(Location location) {
-        World world = location.getWorld();
-        if (!isNormalWorld(world)) {
-            return false;
-        }
-        Location spawn = world.getSpawnLocation();
-        double dx = location.getX() - spawn.getX();
-        double dz = location.getZ() - spawn.getZ();
-        return dx * dx + dz * dz <= MAX_DISTANCE_SQUARED;
-    }
-
     private boolean isDangerous(Location location) {
         String type = location.getBlock().getType().toString();
         String above = location.clone().add(0, 1, 0).getBlock().getType().toString();
@@ -207,14 +198,18 @@ public final class GuestMode extends JavaPlugin {
                 || type.contains("MAGMA")
                 || type.contains("CAMPFIRE")
                 || above.contains("FIRE")
-                || location.getY() < location.getWorld().getMinHeight() + 1;
+                || location.getY() < guestWorld.getMinHeight() + 1;
     }
 
     private World firstNormalWorld() {
         return Bukkit.getWorlds().stream()
-                .filter(this::isNormalWorld)
+                .filter(world -> world.getEnvironment() == World.Environment.NORMAL)
                 .findFirst()
                 .orElse(null);
+    }
+
+    boolean isGuestWorld(World world) {
+        return world == guestWorld;
     }
 
     boolean isFloodgatePlayer(UUID uuid) {
