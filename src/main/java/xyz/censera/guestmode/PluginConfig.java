@@ -21,7 +21,7 @@ final class PluginConfig {
 
         guestJoinMessage = requiredString(cfg, "guest-join-message");
         upgradeMessage = requiredString(cfg, "upgrade-message");
-        broadcastOnUpgrade = requiredString(cfg, "broadcast-on-upgrade");
+        broadcastOnUpgrade = cfg.getString("broadcast-on-upgrade", "");
         guestGameMode = parseGameMode(cfg, "guest-gamemode", GameMode.ADVENTURE, GameMode.SPECTATOR);
         upgradeGameMode = parseGameMode(cfg, "upgrade-gamemode", GameMode.SURVIVAL, GameMode.CREATIVE);
         twoFactorWebHost = requiredString(cfg, "two-factor-web-host");
