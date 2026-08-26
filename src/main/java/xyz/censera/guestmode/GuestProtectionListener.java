@@ -1,12 +1,13 @@
 package xyz.censera.guestmode;
 
-import org.bukkit.GameMode;
 import org.bukkit.Location;
-import org.bukkit.entity.Entity;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
@@ -15,8 +16,6 @@ import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
@@ -156,11 +155,12 @@ final class GuestProtectionListener implements Listener {
     }
 
     private boolean withinGuestBoundary(Location location) {
-        if (location.getWorld() == null || location.getWorld() != plugin.getGuestWorld()) {
+        World world = location.getWorld();
+        if (world == null || world.getEnvironment() != World.Environment.NORMAL) {
             return false;
         }
 
-        Location spawn = location.getWorld().getSpawnLocation();
+        Location spawn = world.getSpawnLocation();
         double dx = location.getX() - spawn.getX();
         double dz = location.getZ() - spawn.getZ();
         return dx * dx + dz * dz <= MAX_DISTANCE_SQUARED;
