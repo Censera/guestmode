@@ -1,7 +1,7 @@
 name: Eyes
 version: "${project.version}"
 main: xyz.censera.guestmode.GuestMode
-api-version: "26.1"
+api-version: "26.2"
 description: Authentication, trust, and world protection for offline-mode Paper servers.
 authors: [Censera]
 softdepend: [floodgate, FastLogin, Geyser-Spigot, ViaVersion, ViaBackwards]
