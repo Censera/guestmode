@@ -33,9 +33,9 @@ public final class GuestMode extends JavaPlugin {
         upgradeTask.start();
 
         GuestModeCommand executor = new GuestModeCommand(this);
-        var adminCommand = getCommand("guestmode");
+        var adminCommand = getCommand("eyes");
         if (adminCommand == null) {
-            throw new IllegalStateException("Required command 'guestmode' is missing from plugin.yml");
+            throw new IllegalStateException("Required command 'eyes' is missing from plugin.yml");
         }
         adminCommand.setExecutor(executor);
         adminCommand.setTabCompleter(executor);
@@ -48,7 +48,7 @@ public final class GuestMode extends JavaPlugin {
         GuestCommand guestCommand = new GuestCommand(this);
         getCommand("guest").setExecutor(guestCommand);
 
-        getLogger().info("Enabled on Paper 26.2.");
+        getLogger().info("Eyes enabled on Paper 26.2.");
     }
 
     @Override
@@ -62,7 +62,7 @@ public final class GuestMode extends JavaPlugin {
             twoFactorSetupServer = null;
         }
         authenticated.clear();
-        getLogger().info("Disabled.");
+        getLogger().info("Eyes disabled.");
     }
 
     void enterGuest(Player player) {
@@ -127,18 +127,6 @@ public final class GuestMode extends JavaPlugin {
     void reload() {
         reloadConfig();
         pluginConfig = new PluginConfig(this);
-        for (UUID uuid : registry.snapshot()) {
-            Player player = Bukkit.getPlayer(uuid);
-            if (player == null || !player.isOnline()) {
-                registry.remove(uuid);
-                continue;
-            }
-            if (player.isWhitelisted()) {
-                registry.remove(uuid);
-                player.setGameMode(pluginConfig.getUpgradeGameMode());
-                player.sendMessage(ChatColor.translateAlternateColorCodes('&', pluginConfig.getUpgradeMessage()));
-            }
-        }
         getLogger().info("Configuration reloaded.");
     }
 
