@@ -1,9 +1,9 @@
-# GuestMode
-# Offline mode Paper authentication. Floodgate players skip authentication.
-# Premium Java auto login is supplied by FastLogin when installed and configured.
+# Eyes
+# Authentication protects player accounts. Guest restrictions protect the world.
+# Full access requires both authentication and server trust through whitelisting.
 
-guest-join-message: "&eWelcome, &f%player%&e! You are in &6Guest Mode&e."
-upgrade-message: "&aYou have been whitelisted. You are now a normal player."
+guest-join-message: "&eWelcome, &f%player%&e. You are currently untrusted and restricted to Guest Mode."
+upgrade-message: "&aYou are authenticated and trusted. Full world access granted."
 broadcast-on-upgrade: ""
 guest-gamemode: SPECTATOR
 upgrade-gamemode: SURVIVAL
