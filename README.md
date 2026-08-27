@@ -1,6 +1,6 @@
-# Eyes
+# eye
 
-Eyes is a Paper plugin for offline-mode servers that combines account authentication with world protection.
+eye is a Paper plugin for offline-mode servers that combines account authentication with world protection.
 
 Authentication answers **who are you?** World protection answers **what are you trusted to do?** They are separate checks that work together.
 
