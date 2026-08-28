@@ -11,7 +11,7 @@ mvn package -DskipTests
 
 Requires Java 25 and Maven 3.8 or newer.
 
-The build produces `Eyes-4.0.1.jar`. Copy it to the server's `plugins/` directory.
+The build produces `Eyes-*.jar`. Copy it to the server's `plugins/` directory.
 
 ## Authentication
 
